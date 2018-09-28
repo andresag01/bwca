@@ -47,4 +47,3 @@ public class WCETBlockCost
         this.dirMem += cost;
     }
 }
-

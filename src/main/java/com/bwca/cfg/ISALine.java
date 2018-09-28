@@ -23,12 +23,12 @@ public class ISALine
     Register destReg;
     ArrayList<Register> regList;
 
-    static final Pattern B_OPCODE =
-        Pattern.compile("^b" +
-            "(?<predicate>eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?$");
+    static final Pattern B_OPCODE = Pattern.compile(
+        "^b"
+        + "(?<predicate>eq|ne|cs|cc|mi|pl|vs|vc|hi|ls|ge|lt|gt|le|al)?$");
     static final Pattern REGLIST =
-        Pattern.compile("^\\{(?<regList>(r[0-7]|pc|lr)" +
-                        "(,\\s+(r[0-7]|pc|lr))*)\\}$");
+        Pattern.compile("^\\{(?<regList>(r[0-7]|pc|lr)"
+                        + "(,\\s+(r[0-7]|pc|lr))*)\\}$");
     static final Pattern SPLIT_REGLIST = Pattern.compile(",\\s+");
     static final Pattern REG_OPERANDS2_3 =
         Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip),\\s+(?<src>.+)$");

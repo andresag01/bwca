@@ -207,13 +207,12 @@ public class ISABlock
             cost = "";
         }
 
-        builder.append(
-            String.format("block%d [%slabel=\"block%d%s%s\\l",
-                          id,
-                          nodeColor,
-                          id,
-                          attrsStr,
-                          cost));
+        builder.append(String.format("block%d [%slabel=\"block%d%s%s\\l",
+                                     id,
+                                     nodeColor,
+                                     id,
+                                     attrsStr,
+                                     cost));
         for (ISALine inst : insts)
         {
             builder.append(inst.toString() + "\\l");
@@ -228,7 +227,7 @@ public class ISABlock
         StringBuilder builder = new StringBuilder();
 
         builder.append("block" + id);
-        //for (ISALine inst : insts)
+        // for (ISALine inst : insts)
         //{
         //    builder.append(inst.toString() + "\n");
         //}
@@ -242,8 +241,8 @@ public class ISABlock
         {
             if (edge.getBlock() != null)
             {
-                String edgeStr = String.format("block%d -> block%d " +
-                                               "[label=\"e%d\"]",
+                String edgeStr = String.format("block%d -> block%d "
+                                                   + "[label=\"e%d\"]",
                                                this.id,
                                                edge.getBlock().getId(),
                                                edge.getId());

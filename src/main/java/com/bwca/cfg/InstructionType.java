@@ -1,7 +1,6 @@
 package com.bwca.cfg;
 
-public enum InstructionType
-{
+public enum InstructionType {
     COND_BRANCH,
     BRANCH,
     OTHER,

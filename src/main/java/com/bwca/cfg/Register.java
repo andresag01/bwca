@@ -1,7 +1,6 @@
 package com.bwca.cfg;
 
-public enum Register
-{
+public enum Register {
     R0(0),
     R1(1),
     R2(2),

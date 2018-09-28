@@ -19,32 +19,29 @@ import com.bwca.models.Model;
 public class ISAFunction
 {
     static final Pattern INST =
-        Pattern.compile("^\\s+(?<address>[0-9a-fA-F]+):" +
-                        "\\s+[0-9a-fA-F]{4}(\\s+[0-9a-fA-F]{4})?" +
-                        "\\s+(?<opcode>\\w+)(\\.n)?(?<body>.*)$");
-    static final Pattern FUNC =
-        Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+" +
-                        "<(?<name>[^>]+)>:$");
-    static final String DOT_TOP_LEVEL =
-        "digraph G {\n" +
-        "    subgraph cluster {\n" +
-        "        style=filled;\n" +
-        "        node [shape=box,style=filled,fillcolor=yellow];\n" +
-        "        label = \"%s\";\n" +
-        "%s" +
-        "%s" +
-        "    }\n" +
-        "}";
-    static final String ILP_TOP_LEVEL =
-        "/* ILP for function %s */\n\n" +
-        "/* Problem */\n" +
-        "max: %s;\n\n" +
-        "/* Output constraints */\n" +
-        "%s\n" +
-        "/* Input constraints */\n" +
-        "%s\n" +
-        "/* Loop constraints */\n" +
-        "%s";
+        Pattern.compile("^\\s+(?<address>[0-9a-fA-F]+):"
+                        + "\\s+[0-9a-fA-F]{4}(\\s+[0-9a-fA-F]{4})?"
+                        + "\\s+(?<opcode>\\w+)(\\.n)?(?<body>.*)$");
+    static final Pattern FUNC = Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+"
+                                                + "<(?<name>[^>]+)>:$");
+    static final String DOT_TOP_LEVEL = "digraph G {\n"
+        + "    subgraph cluster {\n"
+        + "        style=filled;\n"
+        + "        node [shape=box,style=filled,fillcolor=yellow];\n"
+        + "        label = \"%s\";\n"
+        + "%s"
+        + "%s"
+        + "    }\n"
+        + "}";
+    static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
+        + "/* Problem */\n"
+        + "max: %s;\n\n"
+        + "/* Output constraints */\n"
+        + "%s\n"
+        + "/* Input constraints */\n"
+        + "%s\n"
+        + "/* Loop constraints */\n"
+        + "%s";
 
     private long address;
     private long size;
@@ -95,12 +92,13 @@ public class ISAFunction
             else if (address != this.address)
             {
                 // Something went wrong
-                String err = String.format("Function at 0x%08X does not " +
-                                           "match address at symbol table " +
-                                           "0x%08X for function %s",
-                                           address,
-                                           this.address,
-                                           name);
+                String err =
+                    String.format("Function at 0x%08X does not "
+                                      + "match address at symbol table "
+                                      + "0x%08X for function %s",
+                                  address,
+                                  this.address,
+                                  name);
                 System.out.println(err);
                 System.exit(1);
             }
@@ -112,15 +110,14 @@ public class ISAFunction
 
         if (!foundFunc)
         {
-            System.out.println("Could not find function " + this.name + " " +
-                               "in input binary");
+            System.out.println("Could not find function " + this.name + " "
+                               + "in input binary");
             System.exit(1);
         }
 
         // Parse the instructions
         ArrayList<ISALine> insts = new ArrayList<ISALine>();
-        for (funcIndex = funcIndex + 1;
-             funcIndex < objdump.size();
+        for (funcIndex = funcIndex + 1; funcIndex < objdump.size();
              funcIndex++)
         {
             Matcher instMatch = INST.matcher(objdump.get(funcIndex));
@@ -201,12 +198,12 @@ public class ISAFunction
             // branch to an unknown location without a return or a branch
             // (regardless of condition) within the function
             if ((inst.getType() == InstructionType.BRANCH &&
-                (inst.getInstruction() == Instruction.BX ||
-                 inst.getInstruction() == Instruction.POP ||
-                 inst.getInstruction() == Instruction.ADD ||
-                 inst.getInstruction() == Instruction.SUB ||
-                 inst.getInstruction() == Instruction.CPY ||
-                 inst.getInstruction() == Instruction.MOV)) ||
+                 (inst.getInstruction() == Instruction.BX ||
+                  inst.getInstruction() == Instruction.POP ||
+                  inst.getInstruction() == Instruction.ADD ||
+                  inst.getInstruction() == Instruction.SUB ||
+                  inst.getInstruction() == Instruction.CPY ||
+                  inst.getInstruction() == Instruction.MOV)) ||
                 inst.getType() == InstructionType.COND_BRANCH)
             {
                 cur = null;
@@ -493,9 +490,10 @@ public class ISAFunction
                 {
                     if (!block.isExit())
                     {
-                        System.out.println("Block " + block.getId() + " has " +
-                                           "no output edges and not an " +
-                                           "exit in function " + name + "\n");
+                        System.out.println("Block " + block.getId() + " has "
+                                           + "no output edges and not an "
+                                           + "exit in function " + name +
+                                           "\n");
                         System.exit(1);
                     }
                     outConstraints.append("1;\n");
@@ -525,8 +523,8 @@ public class ISAFunction
                 List<String> edges = inEdges.get(block);
                 if (edges == null && block != entry)
                 {
-                    System.out.println("Block has no input edges and is not " +
-                                       "entry point");
+                    System.out.println("Block has no input edges and is not "
+                                       + "entry point");
                     System.exit(1);
                 }
                 else if (edges == null)
@@ -582,11 +580,11 @@ public class ISAFunction
             bwriter.write(output);
             bwriter.close();
         }
-        catch(IOException ioe)
+        catch (IOException ioe)
         {
-			ioe.printStackTrace();
-			System.out.println(ioe);
-			System.exit(1);
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
         }
     }
 
@@ -629,19 +627,17 @@ public class ISAFunction
                 edgesStr += ";\n";
             }
 
-            String dot = String.format(DOT_TOP_LEVEL,
-                                       this.name,
-                                       nodesStr,
-                                       edgesStr);
+            String dot =
+                String.format(DOT_TOP_LEVEL, this.name, nodesStr, edgesStr);
 
             bwriter.write(dot);
             bwriter.close();
         }
         catch (IOException ioe)
         {
-			ioe.printStackTrace();
-			System.out.println(ioe);
-			System.exit(1);
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
         }
     }
 }

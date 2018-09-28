@@ -10,17 +10,17 @@ import com.bwca.models.Model;
 
 public class ISAModule
 {
-	static final Pattern SYM_TABLE_FUNC =
-		Pattern.compile("^\\s+\\d+:" +
-						"\\s+(?<address>[0-9a-fA-F]+)" +
-						"\\s+(?<size>\\d+)" +
-						"\\s+FUNC" +
-						"\\s+(LOCAL|GLOBAL|WEAK)" +
-						"\\s+(DEFAULT|PROTECTED|HIDDEN|INTERNAL)" +
-						"\\s+(ABS|\\d+)" +
-						"\\s+(?<name>.+)$");
+    static final Pattern SYM_TABLE_FUNC =
+        Pattern.compile("^\\s+\\d+:"
+                        + "\\s+(?<address>[0-9a-fA-F]+)"
+                        + "\\s+(?<size>\\d+)"
+                        + "\\s+FUNC"
+                        + "\\s+(LOCAL|GLOBAL|WEAK)"
+                        + "\\s+(DEFAULT|PROTECTED|HIDDEN|INTERNAL)"
+                        + "\\s+(ABS|\\d+)"
+                        + "\\s+(?<name>.+)$");
 
-	private Map<String, ISAFunction> funcMap;
+    private Map<String, ISAFunction> funcMap;
     private String outputDir;
 
     public ISAModule(String outputDir)
@@ -32,29 +32,27 @@ public class ISAModule
     public void parseFunctions(ArrayList<String> readelf,
                                ArrayList<String> objdump)
     {
-		for (String line : readelf)
-		{
-			Matcher match = SYM_TABLE_FUNC.matcher(line);
-			if (!match.matches())
-			{
-				// This is not an entry corresponding to a function symbol
-				continue;
-			}
+        for (String line : readelf)
+        {
+            Matcher match = SYM_TABLE_FUNC.matcher(line);
+            if (!match.matches())
+            {
+                // This is not an entry corresponding to a function symbol
+                continue;
+            }
 
-			String name = match.group("name");
+            String name = match.group("name");
             long size = Long.parseLong(match.group("size"), 10);
             if (size == 0)
             {
                 continue;
             }
-			ISAFunction func = new ISAFunction(
-				Long.parseLong(match.group("address"), 16),
-				size,
-				name);
-			func.parseInstructions(objdump);
+            ISAFunction func = new ISAFunction(
+                Long.parseLong(match.group("address"), 16), size, name);
+            func.parseInstructions(objdump);
 
-			addFunction(name, func);
-		}
+            addFunction(name, func);
+        }
     }
 
     public void analyzeCFG()
@@ -65,15 +63,15 @@ public class ISAModule
         }
     }
 
-	public void addFunction(String name, ISAFunction func)
+    public void addFunction(String name, ISAFunction func)
     {
-		funcMap.put(name, func);
-	}
+        funcMap.put(name, func);
+    }
 
-	public ISAFunction getFunction(String key)
+    public ISAFunction getFunction(String key)
     {
-		return funcMap.get(key);
-	}
+        return funcMap.get(key);
+    }
 
     public void applyModel(Model model)
     {

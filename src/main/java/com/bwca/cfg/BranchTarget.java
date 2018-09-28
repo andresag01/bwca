@@ -35,9 +35,8 @@ public class BranchTarget
 
     public BranchTarget copy()
     {
-        BranchTarget cpy = new BranchTarget(this.address,
-                                            this.targetFunc,
-                                            this.cond);
+        BranchTarget cpy =
+            new BranchTarget(this.address, this.targetFunc, this.cond);
         cpy.block = this.block;
         cpy.id = this.id;
 

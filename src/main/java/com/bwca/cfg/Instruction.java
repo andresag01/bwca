@@ -1,7 +1,6 @@
 package com.bwca.cfg;
 
-public enum Instruction
-{
+public enum Instruction {
     SEV,
     WFE,
     WFI,

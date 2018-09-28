@@ -1,7 +1,6 @@
 package com.bwca.cfg;
 
-public enum Predicate
-{
+public enum Predicate {
     EQ,
     NE,
     CS,
