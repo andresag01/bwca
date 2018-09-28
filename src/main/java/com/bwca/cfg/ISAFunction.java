@@ -1,4 +1,4 @@
-package Driver;
+package com.bwca.cfg;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,6 +13,8 @@ import java.util.regex.Matcher;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
 import java.io.IOException;
+
+import com.bwca.models.Model;
 
 public class ISAFunction
 {

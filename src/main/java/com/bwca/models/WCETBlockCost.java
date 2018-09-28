@@ -1,4 +1,4 @@
-package Driver;
+package com.bwca.models;
 
 public class WCETBlockCost
 {

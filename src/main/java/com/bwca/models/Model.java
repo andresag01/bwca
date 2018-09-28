@@ -1,4 +1,8 @@
-package Driver;
+package com.bwca.models;
+
+import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.BranchTarget;
+import com.bwca.cfg.ISALine;
 
 abstract public class Model
 {

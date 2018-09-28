@@ -1,4 +1,4 @@
-package Driver;
+package com.bwca.cfg;
 
 public class BranchTarget
 {

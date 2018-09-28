@@ -1,10 +1,12 @@
-package Driver;
+package com.bwca.cfg;
 
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+
+import com.bwca.models.Model;
 
 public class ISAModule
 {
