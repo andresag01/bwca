@@ -31,3 +31,7 @@ repositories {
     // You can declare any Maven/Ivy/file repository here.
     jcenter()
 }
+
+task format(type: Exec) {
+    commandLine './format.sh', './src/main/java'
+}
