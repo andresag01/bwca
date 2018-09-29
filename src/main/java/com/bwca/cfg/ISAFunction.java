@@ -197,13 +197,7 @@ public class ISAFunction
             // Terminate the current block if the current instruction is a
             // branch to an unknown location without a return or a branch
             // (regardless of condition) within the function
-            if ((inst.getType() == InstructionType.BRANCH &&
-                 (inst.getInstruction() == Instruction.BX ||
-                  inst.getInstruction() == Instruction.POP ||
-                  inst.getInstruction() == Instruction.ADD ||
-                  inst.getInstruction() == Instruction.SUB ||
-                  inst.getInstruction() == Instruction.CPY ||
-                  inst.getInstruction() == Instruction.MOV)) ||
+            if (inst.getType() == InstructionType.BRANCH &&
                 inst.getType() == InstructionType.COND_BRANCH)
             {
                 cur = null;
@@ -231,10 +225,18 @@ public class ISAFunction
             switch (inst.getType())
             {
                 case OTHER:
+                case BRANCH_LINK:
                     blocks.get(i).setEdges(inst.getBranchTargets());
                     if (i + 1 >= blocks.size())
                     {
-                        // We are at the end of the function
+                        // We are at the end of the function. Set this as an
+                        // exit, but it is weird to not have a function
+                        // terminate with a return instruction.
+                        //
+                        // NOTE: Sometimes the last instruction can be a call
+                        // to a noreturn function, in which case there could be
+                        // a blx or bl instruction at the end.
+                        blocks.get(i).setExit(true);
                         break;
                     }
                     // TODO: Initialize the branch target with more information

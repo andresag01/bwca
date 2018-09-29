@@ -227,10 +227,10 @@ public class ISABlock
         StringBuilder builder = new StringBuilder();
 
         builder.append("block" + id);
-        // for (ISALine inst : insts)
-        //{
-        //    builder.append(inst.toString() + "\n");
-        //}
+        for (ISALine inst : insts)
+        {
+            builder.append("\n" + inst.toString());
+        }
 
         return builder.toString();
     }

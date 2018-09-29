@@ -12,10 +12,12 @@ public class ISALine
 
     // Useful for branches
     private InstructionType type;
-    // There will be one entry per destination. The entry is null if the target
-    // address is not know as in the case for ADD, BX, etc
+    // There will be one entry per destination of conditional branch
+    // instructions
     private ArrayList<BranchTarget> branchTargets;
     private Predicate pred;
+
+    private String targetFunction;
 
     private Instruction inst;
 
@@ -44,6 +46,7 @@ public class ISALine
         this.body = body.trim();
         this.branchTargets = new ArrayList<BranchTarget>();
         this.regList = new ArrayList<Register>();
+        this.targetFunction = null;
 
         parseInstruction();
     }
@@ -126,23 +129,19 @@ public class ISALine
         }
 
         long address = Long.parseLong(match.group("destAddr"), 16);
-        String targetFunc = match.group("funcName");
+        targetFunction = match.group("funcName");
 
-        if (inst == Instruction.BL)
-        {
-            branchTargets.add(new BranchTarget(address, targetFunc, null));
-        }
-        else if (inst == Instruction.B)
+        if (inst == Instruction.B)
         {
             if (type == InstructionType.BRANCH)
             {
-                branchTargets.add(new BranchTarget(address, targetFunc, null));
+                branchTargets.add(new BranchTarget(address, null));
             }
             else
             {
-                branchTargets.add(new BranchTarget(address, targetFunc, true));
+                branchTargets.add(new BranchTarget(address, true));
                 branchTargets.add(
-                    new BranchTarget(this.address + 2, null, false));
+                    new BranchTarget(this.address + 2, false));
             }
         }
     }
@@ -364,13 +363,13 @@ public class ISALine
                 break;
 
             case "blx":
-                type = InstructionType.BRANCH;
+                type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BLX;
-                branchTargets.add(new BranchTarget(null, null, null));
+                // BLX instructions are not tagged with info about the call
                 break;
 
             case "bl":
-                type = InstructionType.BRANCH;
+                type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BL;
                 parseBranchTargetAddress(body);
                 break;

@@ -4,16 +4,14 @@ public class BranchTarget
 {
     // null means that we do not have this information
     private Long address;
-    private String targetFunc;
     // null means that it is not a conditional instruction
     private Boolean cond;
     private ISABlock block;
     private int id;
 
-    public BranchTarget(Long address, String targetFunc, Boolean cond)
+    public BranchTarget(Long address, Boolean cond)
     {
         this.address = address;
-        this.targetFunc = targetFunc;
         this.cond = cond;
         this.block = null;
         this.id = 0;
@@ -22,7 +20,6 @@ public class BranchTarget
     public BranchTarget(ISABlock block)
     {
         this.address = null;
-        this.targetFunc = null;
         this.cond = null;
         this.block = block;
         this.id = 0;
@@ -30,13 +27,13 @@ public class BranchTarget
 
     public String toString()
     {
-        return address + " " + targetFunc + " " + cond + " " + block;
+        return address + " " + cond + " " + block;
     }
 
     public BranchTarget copy()
     {
         BranchTarget cpy =
-            new BranchTarget(this.address, this.targetFunc, this.cond);
+            new BranchTarget(this.address, this.cond);
         cpy.block = this.block;
         cpy.id = this.id;
 
