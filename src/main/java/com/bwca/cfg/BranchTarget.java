@@ -30,16 +30,6 @@ public class BranchTarget
         return address + " " + cond + " " + block;
     }
 
-    public BranchTarget copy()
-    {
-        BranchTarget cpy =
-            new BranchTarget(this.address, this.cond);
-        cpy.block = this.block;
-        cpy.id = this.id;
-
-        return cpy;
-    }
-
     public void setId(int id)
     {
         this.id = id;

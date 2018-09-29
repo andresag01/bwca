@@ -86,26 +86,6 @@ public class ISABlock
         dfsPosition = position;
     }
 
-    public ISABlock copy(int id)
-    {
-        ISABlock cpy = new ISABlock(this.startAddress, id);
-        cpy.marked = this.marked;
-        cpy.exit = this.exit;
-        cpy.loopHeader = this.loopHeader;
-        cpy.loopBranch = this.loopBranch;
-        cpy.innerLoopHeader = this.innerLoopHeader;
-        cpy.dfsPosition = this.dfsPosition;
-
-        cpy.insts = new ArrayList<ISALine>();
-        for (int i = 0; i < this.insts.size(); i++)
-        {
-            cpy.insts.add(this.insts.get(i).copy());
-        }
-        cpy.edges = cpy.getLastLine().getBranchTargets();
-
-        return cpy;
-    }
-
     public void setMark(boolean val)
     {
         marked = val;

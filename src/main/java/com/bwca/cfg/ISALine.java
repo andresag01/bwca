@@ -51,29 +51,6 @@ public class ISALine
         parseInstruction();
     }
 
-    public ISALine copy()
-    {
-        ISALine cpy = new ISALine(this.address, this.opcode, this.body);
-        cpy.type = this.type;
-        cpy.pred = this.pred;
-        cpy.inst = this.inst;
-        cpy.destReg = this.destReg;
-
-        cpy.regList = new ArrayList<Register>();
-        for (int i = 0; i < this.regList.size(); i++)
-        {
-            cpy.regList.add(this.regList.get(i));
-        }
-
-        cpy.branchTargets = new ArrayList<BranchTarget>();
-        for (int i = 0; i < this.branchTargets.size(); i++)
-        {
-            cpy.branchTargets.add(this.branchTargets.get(i).copy());
-        }
-
-        return cpy;
-    }
-
     public String toString()
     {
         return String.format("0x%08X: %s %s", address, opcode, body);
