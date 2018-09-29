@@ -20,6 +20,11 @@ public class WCETModel extends Model
         edges = new HashMap<BranchTarget, WCETEdgeCost>();
     }
 
+    public String getName()
+    {
+        return "wcet";
+    }
+
     public String getBlockSummary(ISABlock block)
     {
         WCETBlockCost cost = blocks.get(block);

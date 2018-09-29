@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.io.File;
 
 import com.bwca.models.Model;
 
@@ -82,13 +83,37 @@ public class ISAModule
         }
     }
 
+    private void createOutputDirectory(String directory)
+    {
+        File dir = new File(directory);
+
+        if (dir.isDirectory())
+        {
+            // The directory already exists, nothing to do
+            return;
+        }
+
+        // Create the directory (and any parent directories that do not exist)
+        if (!dir.mkdirs())
+        {
+            System.out.println("Could not create output directory " +
+                               outputDir);
+            System.exit(1);
+        }
+    }
+
     public void writeILP(Model model)
     {
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
         {
             String name = entry.getKey();
             ISAFunction func = entry.getValue();
-            func.writeILP(outputDir + "/" + name + ".ilp", model);
+            String outDir = outputDir + File.separator + name;
+
+            createOutputDirectory(outDir);
+
+            func.writeILP(
+                outDir + File.separator + model.getName() + ".lp", model);
         }
     }
 
@@ -98,7 +123,12 @@ public class ISAModule
         {
             String name = entry.getKey();
             ISAFunction func = entry.getValue();
-            func.writeDotFile(outputDir + "/" + name + ".dot", model);
+            String outDir = outputDir + File.separator + name;
+
+            createOutputDirectory(outDir);
+
+            func.writeDotFile(
+                outDir + File.separator + model.getName() + ".dot", model);
         }
     }
 }

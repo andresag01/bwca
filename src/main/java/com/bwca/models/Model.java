@@ -17,4 +17,6 @@ abstract public class Model
     public abstract String getNegativeEdgeCost(BranchTarget edge);
 
     public abstract String getInterceptCost();
+
+    public abstract String getName();
 }

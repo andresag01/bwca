@@ -1,8 +1,15 @@
 package com.bwca.driver;
 
-import java.io.*;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.LinkedList;
+import java.util.List;
 
 import com.bwca.models.Model;
 import com.bwca.models.WCETModel;
@@ -23,16 +30,135 @@ public class Controller
         "-d",
     };
 
+    // Command line options
+    private String outputDir;
+    private String binFile;
+    private Set<String> selectedModels;
+    private List<Model> models;
+
+    public static final String[][] MODELS = {
+        { "wcet", "Worst-Case Execution Time" },
+    };
+    private static final String HELP_MSG = "Bristol Worst Case Analysis Tool\n"
+        + "\n"
+        + "ARGUMENTS:\n"
+        + "    -b    Binary file to analyze.\n"
+        + "    -o    Directory to store output files.\n"
+        + "    -h    Prints this help message\n"
+        + "    -l    Print a list of options for -m\n"
+        + "    -m    Analyze the binary file with the specified model.\n"
+        + "          Repeat this option as many times as needed to apply \n"
+        + "          more than one model. Run the program with -l to view a\n"
+        + "          list of options.";
+
     public static void main(String[] args)
     {
-        if (args.length != 1)
+        Controller controller = new Controller();
+        controller.parseCmdLineArguments(args);
+        controller.analyze();
+    }
+
+    public Controller()
+    {
+        outputDir = null;
+        binFile = null;
+        selectedModels = new HashSet<String>();
+        models = new LinkedList<Model>();
+    }
+
+    private void parseCmdLineArguments(String[] args)
+    {
+        boolean fail = false;
+
+        for (int i = 0; i < args.length; i++)
         {
-            System.out.println("This program takes exactly one argument!");
-            System.exit(0);
+            switch (args[i])
+            {
+                case "-b":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-b option takes one argument");
+                        System.exit(1);
+                    }
+                    binFile = args[++i];
+                    break;
+
+                case "-o":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-o option takes one argument");
+                        System.exit(1);
+                    }
+                    outputDir = args[++i];
+                    break;
+
+                case "-h":
+                    System.out.println(HELP_MSG);
+                    System.exit(0);
+                    break;
+
+                case "-m":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-m option takes one argument");
+                        System.exit(1);
+                    }
+                    selectedModels.add(args[++i]);
+                    break;
+
+                case "-l":
+                    StringBuilder builder = new StringBuilder();
+                    for (String[] model : MODELS)
+                    {
+                        builder.append(String.format(
+                            "    %6s  %s\n", model[0], model[1]));
+                    }
+                    System.out.println("Available models:");
+                    System.out.print(builder.toString());
+                    System.exit(0);
+                    break;
+
+                default:
+                    System.out.println("Unrecognized option " + args[i]);
+                    System.exit(1);
+            }
         }
 
-        Controller controller = new Controller();
-        controller.analyze(args[0]);
+        // Check for errors
+        if (outputDir == null)
+        {
+            fail = true;
+            System.out.println("Missing output directory");
+        }
+        if (binFile == null)
+        {
+            fail = true;
+            System.out.println("Missing binary file");
+        }
+        if (selectedModels.isEmpty())
+        {
+            fail = true;
+            System.out.println("Must select at least one model");
+        }
+        for (String modelOption : selectedModels)
+        {
+            switch (modelOption)
+            {
+                case "wcet":
+                    models.add(new WCETModel());
+                    break;
+
+                default:
+                    System.out.println("Unrecognized model " + modelOption);
+                    fail = true;
+                    break;
+            }
+        }
+
+        if (fail)
+        {
+            System.exit(1);
+        }
     }
 
     private ArrayList<String> runShell(String[] cmd)
@@ -84,17 +210,7 @@ public class Controller
         return output;
     }
 
-    private ISAModule parseFunctions(ArrayList<String> readelf,
-                                     ArrayList<String> objdump)
-    {
-        ISAModule module = new ISAModule(".");
-
-        module.parseFunctions(readelf, objdump);
-
-        return module;
-    }
-
-    private void analyze(String filename)
+    private void analyze()
     {
         ArrayList<String> objdump = null;
         ArrayList<String> readelf = null;
@@ -103,12 +219,12 @@ public class Controller
         {
             System.out.println("Running objdump");
             String[] cmd = Arrays.copyOf(OBJDUMP_CMD, OBJDUMP_CMD.length + 1);
-            cmd[cmd.length - 1] = filename;
+            cmd[cmd.length - 1] = binFile;
             objdump = runShell(cmd);
 
             System.out.println("Running readelf");
             cmd = Arrays.copyOf(READELF_CMD, READELF_CMD.length + 1);
-            cmd[cmd.length - 1] = filename;
+            cmd[cmd.length - 1] = binFile;
             readelf = runShell(cmd);
         }
         catch (IOException ioe)
@@ -125,20 +241,21 @@ public class Controller
         }
 
         System.out.println("Generating CFG");
-        ISAModule module = new ISAModule(".");
+        ISAModule module = new ISAModule(outputDir);
         module.parseFunctions(readelf, objdump);
 
         System.out.println("Analyzing CFG");
         module.analyzeCFG();
 
-        System.out.println("Applying model");
-        Model model = new WCETModel();
-        module.applyModel(model);
+        for (Model model : models)
+        {
+            System.out.println("Applying model " + model.getName());
+            module.applyModel(model);
 
-        System.out.println("Writing Dot representation");
-        module.writeDotRepresentation(model);
-
-        System.out.println("Write ILP file");
-        module.writeILP(model);
+            System.out.println("    - Writing .dot file");
+            module.writeDotRepresentation(model);
+            System.out.println("    - Writing .lp file");
+            module.writeILP(model);
+        }
     }
 }
