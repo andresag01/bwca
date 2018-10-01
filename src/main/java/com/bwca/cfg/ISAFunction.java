@@ -196,7 +196,7 @@ public class ISAFunction
             // Terminate the current block if the current instruction is a
             // branch to an unknown location without a return or a branch
             // (regardless of condition) within the function
-            if (inst.getType() == InstructionType.BRANCH &&
+            if (inst.getType() == InstructionType.BRANCH ||
                 inst.getType() == InstructionType.COND_BRANCH)
             {
                 cur = null;
