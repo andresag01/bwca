@@ -25,13 +25,12 @@ public class ISAFunction
     static final Pattern FUNC = Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+"
                                                 + "<(?<name>[^>]+)>:$");
     static final String DOT_TOP_LEVEL = "digraph G {\n"
-        + "    subgraph cluster {\n"
-        + "        style=filled;\n"
-        + "        node [shape=box,style=filled,fillcolor=yellow];\n"
-        + "        label = \"%s\";\n"
+        + "    style=filled;\n"
+        + "    node [shape=box,style=filled,fillcolor=yellow];\n"
+        + "    label = \"%s\";\n"
+        + "    labelloc = \"t\";\n"
         + "%s"
         + "%s"
-        + "    }\n"
         + "}";
     static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
         + "/* Problem */\n"
@@ -608,7 +607,7 @@ public class ISAFunction
                     cost = model.getBlockSummary(block);
                 }
                 block.nodesToString(nodes, block == entry, cost);
-                block.edgesToString(edges);
+                block.edgesToString(edges, model);
             }
 
             String nodesStr = "";
@@ -617,15 +616,15 @@ public class ISAFunction
                 System.out.println("Trying to print empty function");
                 System.exit(1);
             }
-            nodesStr = String.join(";\n        ", nodes);
-            nodesStr = "        " + nodesStr;
+            nodesStr = String.join(";\n    ", nodes);
+            nodesStr = "    " + nodesStr;
             nodesStr += ";\n";
 
             String edgesStr = "";
             if (edges.size() > 0)
             {
-                edgesStr = String.join(";\n        ", edges);
-                edgesStr = "        " + edgesStr;
+                edgesStr = String.join(";\n    ", edges);
+                edgesStr = "    " + edgesStr;
                 edgesStr += ";\n";
             }
 

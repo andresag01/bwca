@@ -215,17 +215,21 @@ public class ISABlock
         return builder.toString();
     }
 
-    public void edgesToString(ArrayList<String> output)
+    public void edgesToString(ArrayList<String> output,
+                              Model model)
     {
         for (BranchTarget edge : edges)
         {
             if (edge.getBlock() != null)
             {
+                String edgeCost = model.getEdgeSummary(edge);
+                edgeCost = (edgeCost == null) ? "" : "[" + edgeCost + "]";
                 String edgeStr = String.format("block%d -> block%d "
-                                                   + "[label=\"e%d\"]",
+                                                   + "[label=\"e%d %s\"]",
                                                this.id,
                                                edge.getBlock().getId(),
-                                               edge.getId());
+                                               edge.getId(),
+                                               edgeCost);
                 output.add(edgeStr);
             }
         }
