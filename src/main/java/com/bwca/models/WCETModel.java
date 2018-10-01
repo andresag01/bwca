@@ -34,7 +34,7 @@ public class WCETModel extends Model
     public String getEdgeSummary(BranchTarget edge)
     {
         String cost = getNegativeEdgeCost(edge);
-        return (cost == 0) ? null : "-" + Integer.toString(cost);
+        return (cost == null) ? cost : "-" + cost;
     }
 
     public String getPositiveBlockCost(ISABlock block)

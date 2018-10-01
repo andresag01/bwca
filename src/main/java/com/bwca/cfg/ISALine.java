@@ -161,6 +161,11 @@ public class ISALine
         return regList;
     }
 
+    public String getTargetFunction()
+    {
+        return targetFunction;
+    }
+
     private void parseInstruction()
     {
         pred = Predicate.AL;
