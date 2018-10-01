@@ -14,6 +14,7 @@ public enum Instruction {
     LDRSH,
     LDR,
     STRB,
+    STRH,
     STR,
     BLX,
     BL,

@@ -78,7 +78,7 @@ public class WCAModel extends Model
         blocks.put(block, cost);
     }
 
-    public void addEdgeCost(BranchTarget edge)
+    public void addEdgeCost(ISABlock block, BranchTarget edge)
     {
         return;
     }

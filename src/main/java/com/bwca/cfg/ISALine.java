@@ -18,6 +18,7 @@ public class ISALine
     private Predicate pred;
 
     private String targetFunction;
+    private long targetFunctionAddress;
 
     private Instruction inst;
 
@@ -47,6 +48,7 @@ public class ISALine
         this.branchTargets = new ArrayList<BranchTarget>();
         this.regList = new ArrayList<Register>();
         this.targetFunction = null;
+        this.targetFunctionAddress = 0;
 
         parseInstruction();
     }
@@ -107,16 +109,13 @@ public class ISALine
 
         long address = Long.parseLong(match.group("destAddr"), 16);
         targetFunction = match.group("funcName");
+        targetFunctionAddress = address;
 
         if (inst == Instruction.B)
         {
-            if (type == InstructionType.BRANCH)
+            branchTargets.add(new BranchTarget(address, true));
+            if (type == InstructionType.COND_BRANCH)
             {
-                branchTargets.add(new BranchTarget(address, null));
-            }
-            else
-            {
-                branchTargets.add(new BranchTarget(address, true));
                 branchTargets.add(
                     new BranchTarget(this.address + 2, false));
             }
@@ -127,7 +126,7 @@ public class ISALine
     {
         for (BranchTarget target : branchTargets)
         {
-            if (target.getCondition() != null && target.getCondition() == cond)
+            if (target.getCondition() == cond)
             {
                 return target;
             }
@@ -164,6 +163,11 @@ public class ISALine
     public String getTargetFunction()
     {
         return targetFunction;
+    }
+
+    public long getTargetFunctionAddress()
+    {
+        return targetFunctionAddress;
     }
 
     private void parseInstruction()
@@ -337,6 +341,11 @@ public class ISALine
             case "strb":
                 type = InstructionType.OTHER;
                 inst = Instruction.STRB;
+                break;
+
+            case "strh":
+                type = InstructionType.OTHER;
+                inst = Instruction.STRH;
                 break;
 
             case "str":

@@ -65,21 +65,12 @@ public class WCETModel extends Model
 
         switch (inst.getInstruction())
         {
-            case SEV:
-                cost.addDirMem(2);
-                break;
-
-            case WFE:
-                cost.addDirMem(1);
-                cost.addMem(1);
-                cost.addDir(1);
-                break;
-
             case WFI:
                 cost.addDirMem(2);
                 break;
 
             case POP:
+            case LDMIA:
                 cost.addDirMem(1);
                 // Always assume the last load is a pointer so it needs marking
                 cost.addDir(1);
@@ -88,13 +79,6 @@ public class WCETModel extends Model
                     cost.addAlu(2);
                     cost.addBranch(1);
                 }
-                cost.addDirMem(inst.getRegisterList().size());
-                break;
-
-            case LDMIA:
-                cost.addDirMem(1);
-                // Always assume the last load is a pointer so it needs marking
-                cost.addDir(1);
                 cost.addDirMem(inst.getRegisterList().size());
                 break;
 
@@ -109,17 +93,20 @@ public class WCETModel extends Model
             case LDRSB:
             case LDRSH:
             case STRB:
+            case STRH:
                 cost.addDirMem(1);
                 cost.addMem(1);
                 break;
 
             case LDR:
+            case WFE:
                 cost.addDirMem(1);
                 cost.addMem(1);
                 cost.addDir(1);
                 break;
 
             case STR:
+            case SEV:
                 cost.addDirMem(2);
                 break;
 
@@ -210,10 +197,14 @@ public class WCETModel extends Model
             case CPS:
                 cost.addAlu(1);
                 break;
+
+            default:
+                System.out.println("WCET: Unrecognized instruction");
+                System.exit(1);
         }
     }
 
-    public void addEdgeCost(BranchTarget edge)
+    public void addEdgeCost(ISABlock block, BranchTarget edge)
     {
         WCETEdgeCost cost = edges.get(edge);
 

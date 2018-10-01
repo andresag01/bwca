@@ -142,7 +142,7 @@ public class ISABlock
 
         for (BranchTarget edge : edges)
         {
-            model.addEdgeCost(edge);
+            model.addEdgeCost(this, edge);
         }
     }
 
