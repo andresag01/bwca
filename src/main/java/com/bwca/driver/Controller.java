@@ -14,6 +14,7 @@ import java.util.List;
 import com.bwca.models.Model;
 import com.bwca.models.WCETModel;
 import com.bwca.models.WCAModel;
+import com.bwca.models.WCMAModel;
 import com.bwca.cfg.ISAModule;
 
 public class Controller
@@ -40,6 +41,7 @@ public class Controller
     public static final String[][] MODELS = {
         { "wcet", "Worst-Case Execution Time" },
         { "wca", "Worst-Case Allocation" },
+        { "wcma", "Worst-Case Memory Access" },
     };
     private static final String HELP_MSG = "Bristol Worst Case Analysis Tool\n"
         + "\n"
@@ -152,6 +154,10 @@ public class Controller
 
                 case "wca":
                     models.add(new WCAModel());
+                    break;
+
+                case "wcma":
+                    models.add(new WCMAModel());
                     break;
 
                 default:
