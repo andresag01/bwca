@@ -79,6 +79,10 @@ public class WCMAModel extends Model
         {
             case WFI:
                 cost.addMem(2.0);
+                cost.addFetch(0.5);
+                // If this instruction is unaligned, fetch happens
+                // simultaneously with instruction execution
+                cost.subFetch(aligned ? 0.0 : 1.0);
                 break;
 
             case POP:
