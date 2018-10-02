@@ -85,7 +85,7 @@ public class WCMAModel extends Model
         switch (instsPerFetch)
         {
             case 2:
-                return instAddress % BYTES_PER_WORD == 0;
+                return instAddress % BYTES_PER_WORD != 0;
 
             default:
                 // Check whether the address of the instruction is two
@@ -104,7 +104,7 @@ public class WCMAModel extends Model
         // Compute the cost of the fetching (and not executing) the remaining
         // instructions in the fetch buffer
         long fetchWidthBytes = instsPerFetch * BYTES_PER_INST;
-        long instIndex = (instAddress % fetchWidthBytes) / instsPerFetch;
+        long instIndex = (instAddress % fetchWidthBytes) / BYTES_PER_INST;
         double discardedInstsInBuffer = 1.0 - costOfFetch(1) * instIndex;
 
         // Compute the cost of disregarding already placed fetch requests.
@@ -132,7 +132,7 @@ public class WCMAModel extends Model
     private double costOfFetchingBranchTarget(long targetAddress)
     {
         long fetchWidthBytes = instsPerFetch * BYTES_PER_INST;
-        long instIndex = (targetAddress % fetchWidthBytes) / instsPerFetch;
+        long instIndex = (targetAddress % fetchWidthBytes) / BYTES_PER_INST;
         return costOfFetch(1) * instIndex;
     }
 
@@ -149,7 +149,7 @@ public class WCMAModel extends Model
         long targetAddress;
         long instAddress = inst.getAddress();
         double subFetch = 0.0;
-        if (!isFetchingWhileMemoryAccess(instAddress))
+        if (isFetchingWhileMemoryAccess(instAddress))
         {
             subFetch = 1.0;
         }
