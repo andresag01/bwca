@@ -35,6 +35,7 @@ public class Controller
     // Command line options
     private String outputDir;
     private String binFile;
+    private int fetchWidthBytes;
     private Set<String> selectedModels;
     private List<Model> models;
 
@@ -50,6 +51,7 @@ public class Controller
         + "    -o    Directory to store output files.\n"
         + "    -h    Prints this help message\n"
         + "    -l    Print a list of options for -m\n"
+        + "    -w    Fetch width in bytes. Default: 4\n"
         + "    -m    Analyze the binary file with the specified model.\n"
         + "          Repeat this option as many times as needed to apply \n"
         + "          more than one model. Run the program with -l to view a\n"
@@ -68,6 +70,7 @@ public class Controller
         binFile = null;
         selectedModels = new HashSet<String>();
         models = new LinkedList<Model>();
+        fetchWidthBytes = 4;
     }
 
     private void parseCmdLineArguments(String[] args)
@@ -108,6 +111,15 @@ public class Controller
                         System.exit(1);
                     }
                     selectedModels.add(args[++i]);
+                    break;
+
+                case "-w":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-w option takes one argument");
+                        System.exit(1);
+                    }
+                    fetchWidthBytes = Integer.parseInt(args[++i]);
                     break;
 
                 case "-l":
@@ -157,7 +169,7 @@ public class Controller
                     break;
 
                 case "wcma":
-                    models.add(new WCMAModel());
+                    models.add(new WCMAModel(fetchWidthBytes));
                     break;
 
                 default:
