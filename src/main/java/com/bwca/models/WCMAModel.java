@@ -41,13 +41,13 @@ public class WCMAModel extends Model
     public String getBlockSummary(ISABlock block)
     {
         WCMABlockCost cost = blocks.get(block);
-        return String.format("f=%.1f,m=%.1f", cost.getFetch(), cost.getMem());
+        return String.format("f=%.2f,m=%.2f", cost.getFetch(), cost.getMem());
     }
 
     public String getPositiveBlockCost(ISABlock block)
     {
         WCMABlockCost cost = blocks.get(block);
-        return String.format("%.1f", cost.getFetch() + cost.getMem());
+        return String.format("%.2f", cost.getFetch() + cost.getMem());
     }
 
     public String getInterceptCost()
@@ -70,7 +70,7 @@ public class WCMAModel extends Model
         }
         else
         {
-            return String.format("%.1f", cost.getNegativeCost());
+            return String.format("%.2f", cost.getNegativeCost());
         }
     }
 
