@@ -266,7 +266,11 @@ public class Controller
 
         System.out.println("Generating CFG");
         ISAModule module = new ISAModule(outputDir);
-        module.parseFunctions(readelf, objdump);
+        if (module.parseFunctions(readelf, objdump) != 0)
+        {
+            module.printMissingInfoMessages();
+            System.exit(1);
+        }
 
         System.out.println("Analyzing CFG");
         module.analyzeCFG();

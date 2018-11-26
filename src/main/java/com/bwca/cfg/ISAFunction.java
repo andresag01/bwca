@@ -48,6 +48,7 @@ public class ISAFunction
     private ISABlock entry;
     private ArrayList<ISABlock> blocks;
     private int nextBlockId;
+    private LinkedList<String> infoMsgs;
 
     public ISAFunction(long address, long size, String name)
     {
@@ -57,9 +58,15 @@ public class ISAFunction
         this.name = name;
         this.entry = null;
         this.nextBlockId = 0;
+        this.infoMsgs = new LinkedList<String>();
     }
 
-    public void parseInstructions(ArrayList<String> objdump)
+    public LinkedList<String> getMissingInfoMessages()
+    {
+        return infoMsgs;
+    }
+
+    public int parseInstructions(ArrayList<String> objdump)
     {
         boolean foundFunc = false;
         int funcIndex;
@@ -137,7 +144,10 @@ public class ISAFunction
             }
 
             // Create the instruction
-            insts.add(new ISALine(address, opcode, body));
+            ISALine line = new ISALine(address, opcode, body);
+            // Check for missing information
+            insts.add(line);
+            infoMsgs.addAll(line.getMissingInfoMessages());
         }
 
         // Extract target addresses
@@ -221,21 +231,28 @@ public class ISAFunction
             //     block and the appropriate target block (which should be
             //     different!
             ISALine inst = blocks.get(i).getLastLine();
+            blocks.get(i).setEdges(inst.getBranchTargets());
             switch (inst.getType())
             {
                 case OTHER:
                 case BRANCH_LINK:
-                    blocks.get(i).setEdges(inst.getBranchTargets());
+                    //if (i + 1 >= blocks.size())
+                    //{
+                    //    // We are at the end of the function. Set this as an
+                    //    // exit, but it is weird to not have a function
+                    //    // terminate with a return instruction.
+                    //    //
+                    //    // NOTE: Sometimes the last instruction can be a call
+                    //    // to a noreturn function, in which case there could be
+                    //    // a blx or bl instruction at the end.
+                    //    blocks.get(i).setExit(true);
+                    //    break;
+                    //}
                     if (i + 1 >= blocks.size())
                     {
-                        // We are at the end of the function. Set this as an
-                        // exit, but it is weird to not have a function
-                        // terminate with a return instruction.
-                        //
-                        // NOTE: Sometimes the last instruction can be a call
-                        // to a noreturn function, in which case there could be
-                        // a blx or bl instruction at the end.
-                        blocks.get(i).setExit(true);
+                        // There are no subsequent blocks, this is probably an
+                        // exit block, but at the momment the user has to
+                        // label these manually
                         break;
                     }
                     // TODO: Initialize the branch target with more information
@@ -244,13 +261,12 @@ public class ISAFunction
 
                 case BRANCH:
                 case COND_BRANCH:
-                    blocks.get(i).setEdges(inst.getBranchTargets());
-                    if (inst.getBranchTargets().size() == 0)
-                    {
-                        // This is an exit block
-                        blocks.get(i).setExit(true);
-                        break;
-                    }
+                    //if (inst.getBranchTargets().size() == 0)
+                    //{
+                    //    // This is an exit block
+                    //    //blocks.get(i).setExit(true);
+                    //    break;
+                    //}
                     for (BranchTarget target : inst.getBranchTargets())
                     {
                         Long address = target.getAddress();
@@ -265,7 +281,33 @@ public class ISAFunction
                     System.out.println("Invalid instruction type");
                     System.exit(1);
             }
+
+            if (inst.isExit())
+            {
+                blocks.get(i).setExit(true);
+            }
         }
+
+        // Check that there is at least one exit block
+        boolean hasExit = false;
+        for (int i = 0; i < blocks.size(); i++)
+        {
+            if (blocks.get(i).isExit())
+            {
+                hasExit = true;
+            }
+        }
+        if (!hasExit)
+        {
+            infoMsgs.add("No exit block");
+        }
+
+        if (infoMsgs.size() != 0)
+        {
+            return -1;
+        }
+
+        return 0;
     }
 
     private void garbageCollectBlocks()

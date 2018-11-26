@@ -1,6 +1,7 @@
 package com.bwca.cfg;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -21,6 +22,10 @@ public class ISALine
     private long targetFunctionAddress;
 
     private Instruction inst;
+
+    private LinkedList<String> infoMsgs;
+
+    private boolean exit;
 
     // Operands
     Register destReg;
@@ -47,8 +52,10 @@ public class ISALine
         this.body = body.trim();
         this.branchTargets = new ArrayList<BranchTarget>();
         this.regList = new ArrayList<Register>();
+        this.infoMsgs = new LinkedList<String>();
         this.targetFunction = null;
         this.targetFunctionAddress = 0;
+        this.exit = false;
 
         parseInstruction();
     }
@@ -170,8 +177,19 @@ public class ISALine
         return targetFunctionAddress;
     }
 
+    public LinkedList<String> getMissingInfoMessages()
+    {
+        return infoMsgs;
+    }
+
+    public boolean isExit()
+    {
+        return exit;
+    }
+
     private void parseInstruction()
     {
+        String infoMsgFmtBrandDst = "0x%08x %s (unknown branch destination)";
         pred = Predicate.AL;
 
         Matcher match = B_OPCODE.matcher(opcode);
@@ -290,6 +308,9 @@ public class ISALine
                     if (reg == Register.PC)
                     {
                         type = InstructionType.BRANCH;
+                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                   address,
+                                                   "pop"));
                         break;
                     }
                 }
@@ -357,17 +378,26 @@ public class ISALine
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BLX;
                 // BLX instructions are not tagged with info about the call
+                infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                           address,
+                                           "blx"));
                 break;
 
             case "bl":
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BL;
                 parseBranchTargetAddress(body);
+                infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                           address,
+                                           "bl"));
                 break;
 
             case "bx":
                 type = InstructionType.BRANCH;
                 inst = Instruction.BX;
+                infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                           address,
+                                           "bx"));
                 break;
 
             case "add":
@@ -378,6 +408,9 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
+                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                               address,
+                                               "bx"));
                 }
                 break;
 
@@ -389,6 +422,9 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
+                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                               address,
+                                               "sub"));
                 }
                 break;
 
@@ -406,6 +442,9 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
+                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                               address,
+                                               "cpy"));
                 }
                 break;
 
@@ -417,6 +456,9 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
+                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                               address,
+                                               "mov"));
                 }
                 break;
 

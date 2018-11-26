@@ -30,9 +30,23 @@ public class ISAModule
         this.outputDir = outputDir;
     }
 
-    public void parseFunctions(ArrayList<String> readelf,
+    public void printMissingInfoMessages()
+    {
+        for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
+        {
+            System.out.printf("Function %s\n", entry.getKey());
+            for (String msg : entry.getValue().getMissingInfoMessages())
+            {
+                System.out.printf("    %s\n", msg);
+            }
+        }
+    }
+
+    public int parseFunctions(ArrayList<String> readelf,
                                ArrayList<String> objdump)
     {
+        boolean failed = false;
+
         for (String line : readelf)
         {
             Matcher match = SYM_TABLE_FUNC.matcher(line);
@@ -50,10 +64,15 @@ public class ISAModule
             }
             ISAFunction func = new ISAFunction(
                 Long.parseLong(match.group("address"), 16), size, name);
-            func.parseInstructions(objdump);
+            if (func.parseInstructions(objdump) != 0)
+            {
+                failed = true;
+            }
 
             addFunction(name, func);
         }
+
+        return failed ? -1 : 0;
     }
 
     public void analyzeCFG()
