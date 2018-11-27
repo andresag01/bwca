@@ -5,10 +5,36 @@ import argparse
 import os
 import re
 import subprocess
+import ast
+import operator as op
+
+# Supported operators
+operators = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.USub: op.neg,
+}
+
+def eval_expr(expr):
+    return eval_(ast.parse(expr, mode='eval').body)
+
+def eval_(node):
+    if isinstance(node, ast.Num): # <number>
+        return node.n
+    elif isinstance(node, ast.BinOp): # <left> <operator> <right>
+        return operators[type(node.op)](eval_(node.left), eval_(node.right))
+    elif isinstance(node, ast.UnaryOp): # <operator> <operand> e.g., -1
+        return operators[type(node.op)](eval_(node.operand))
+    else:
+        raise TypeError(node)
 
 class Function:
     FUNC_WEIGHTS_PATTERN = re.compile(r'^(?P<funcName>[a-zA-Z_]\w*)\s+=\s+WEIGHT;$')
     LP_SOLVE_RES_PATTERN = re.compile(r'^Value of objective function:\s+(?P<cost>\d+(\.\d+)?)$')
+    LP_MAX_PROBLEM_PATTERN = re.compile(r'max:\s+[a-zA-Z_]\w*\s+[a-zA-Z_]\w*' +
+        r'(\s+\+\s+[a-zA-Z_]\w*\s+[a-zA-Z_]\w*|' +
+        r'\s+-\s+[0-9]+(\.[0-9]+)?\s+[a-zA-Z_]\w*)*;')
 
     def __init__(self, name, in_dir_path, out_dir_path):
         self.name = name
@@ -81,8 +107,69 @@ class Function:
             if self.models[model_name] is None:
                 continue
             repl = "{0} = {1};".format(func.name, func.results[model_name])
+            # Substitute the keyword WEIGHT in the lp file
             self.models[model_name] = pattern.sub(repl,
                 self.models[model_name])
+            # Substitute the occurrence of the function name in the lp file
+            repl = str(func.results[model_name])
+            cnt = self.models[model_name].count(func.name) - 1
+            self.models[model_name] = self.models[model_name].replace(func.name,
+                repl, cnt)
+
+    def set_block_weights(self):
+        for model_name in self.models.keys():
+            # Match the max problem
+            match = Function.LP_MAX_PROBLEM_PATTERN.search(
+                self.models[model_name])
+            if not match:
+                print("Failed to match problem for " + self.name + " and " +
+                    model_name)
+                sys.exit(1)
+            problem = self.models[model_name][match.start():match.end()]
+
+            # Look up the constant names for every block weight
+            index = 0
+            while True:
+                pattern = re.compile(r'wb' + str(index))
+                if pattern.search(problem):
+                    index += 1
+                    continue
+                break
+
+            for i in range(0, index):
+                # Look Up the expression for each constant block weight
+                pattern = re.compile(r'wb' + str(i) +
+                    r'\s+=\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?' +
+                    r'(\s+[\+-]\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?)*;')
+                match = pattern.search(self.models[model_name])
+                if not match:
+                    print("Failed to match block weight for " + self.name +
+                        " and " + model_name)
+                    sys.exit(1)
+                weight = self.models[model_name][match.start():match.end()]
+                weight = weight.replace("\n", " ")
+
+                # Replace the space operator for multiplication (*)
+                pattern = re.compile(r'(?P<lhs>[0-9]+(\.[0-9]+)?)\s+' +
+                    r'(?P<rhs>[0-9]+(\.[0-9]+)?)')
+                while True:
+                    match = pattern.search(weight)
+                    if not match:
+                        break
+                    weight = pattern.sub(match.group("lhs") + " * " +
+                        match.group("rhs"), weight)
+
+                # Remove the assignment operator and semicolon
+                weight = weight.strip()
+                weight = weight[weight.find("=") + 1:-1]
+                weight = weight.strip()
+
+                # Evaluate the expression
+                const = eval_expr(weight)
+
+                # Replace the block weight with the evaluated constant
+                self.models[model_name] = self.models[model_name].replace(
+                    "wb" + str(i), str(const), 1)
 
     def run_lp_solve(self, lp_filename, out_filename):
         # Run the lp_solve application and parse the result
@@ -118,9 +205,12 @@ class Function:
             if dep.solve_ilp(visited_funcs):
                 self.set_func_weight(dep)
 
+        # Replace the block weight variables by constants
+        self.set_block_weights()
+
         # Solve for this function
         for model_name, model in self.models.items():
-            outfilename = os.path.join(self.out_dir_path, model_name + ".ilp")
+            outfilename = os.path.join(self.out_dir_path, model_name + ".lp")
             outlpsolve = os.path.join(self.out_dir_path, model_name + ".log")
             self.write_file(outfilename, model)
             self.results[model_name] = self.run_lp_solve(outfilename, outlpsolve)
