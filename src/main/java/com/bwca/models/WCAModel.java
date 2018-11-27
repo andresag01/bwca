@@ -11,11 +11,13 @@ import com.bwca.cfg.Instruction;
 
 public class WCAModel extends Model
 {
-    private Map<ISABlock, Integer> blocks;
+    private Map<ISABlock, Integer> wfi;
+    private Map<ISABlock, Integer> malloc;
 
     public WCAModel()
     {
-        blocks = new HashMap<ISABlock, Integer>();
+        wfi = new HashMap<ISABlock, Integer>();
+        malloc = new HashMap<ISABlock, Integer>();
     }
 
     public String getName()
@@ -25,8 +27,7 @@ public class WCAModel extends Model
 
     public String getBlockSummary(ISABlock block)
     {
-        Integer cost = blocks.get(block);
-        return cost.toString();
+        return String.format("w=%d,m=%d", wfi.get(block), malloc.get(block));
     }
 
     public String getEdgeSummary(BranchTarget edge)
@@ -36,7 +37,20 @@ public class WCAModel extends Model
 
     public String getPositiveBlockCost(ISABlock block)
     {
-        return blocks.get(block).toString();
+        StringBuilder builder = new StringBuilder();
+
+        for (int i = 0; i < wfi.get(block); i++)
+        {
+            builder.append("BOUND_WFI" + i);
+            builder.append((i + 1 >= wfi.get(block)) ? "" : " +\n    ");
+        }
+
+        for (int i = 0; i < malloc.get(block); i++)
+        {
+            builder.append(" +\n    " + "BOUND_MALLOC" + i);
+        }
+
+        return (builder.length() == 0) ? "0" : builder.toString();
     }
 
     public String getNegativeEdgeCost(BranchTarget edge)
@@ -51,17 +65,19 @@ public class WCAModel extends Model
 
     public void addLineCost(ISABlock block, ISALine inst)
     {
-        Integer cost = blocks.get(block);
+        Integer wfiCost = wfi.get(block);
+        Integer mallocCost = malloc.get(block);;
 
-        if (cost == null)
+        if (wfiCost == null)
         {
-            cost = 0;
+            wfiCost = 0;
+            mallocCost = 0;
         }
 
         if (inst.getInstruction() == Instruction.WFI)
         {
             // GETM instruction
-            cost += 1;
+            wfiCost += 1;
         }
         else if (inst.getType() == InstructionType.BRANCH_LINK)
         {
@@ -71,11 +87,12 @@ public class WCAModel extends Model
                  targetFunc.contains("calloc") ||
                  targetFunc.contains("realloc")))
             {
-                cost += 1;
+                mallocCost += 1;
             }
         }
 
-        blocks.put(block, cost);
+        wfi.put(block, wfiCost);
+        malloc.put(block, mallocCost);
     }
 
     public void addEdgeCost(ISABlock block, BranchTarget edge)

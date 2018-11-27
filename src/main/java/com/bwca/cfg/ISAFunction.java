@@ -35,7 +35,7 @@ public class ISAFunction
     static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
         + "/* Problem */\n"
         + "max: %s;\n\n"
-        + "/* Function call constraints */\n"
+        + "/* Block weights */\n"
         + "%s\n"
         + "/* Function call weights */\n"
         + "%s\n"
@@ -574,7 +574,7 @@ public class ISAFunction
             StringBuilder outConstraints = new StringBuilder();
             StringBuilder inConstraints = new StringBuilder();
             StringBuilder loopConstraints = new StringBuilder();
-            StringBuilder callConstraints = new StringBuilder();
+            StringBuilder blockWeights = new StringBuilder();
             StringBuilder functionWeights = new StringBuilder();
             Map<String, FunctionCallInformation> callInfo;
             Set<String> functionsCalled = new HashSet<String>();
@@ -585,31 +585,9 @@ public class ISAFunction
             {
                 StringBuilder blockCost = new StringBuilder();
                 callInfo = getFunctionCalls(block);
-                if (callInfo.isEmpty())
-                {
-                    blockCost.append(model.getPositiveBlockCost(block));
-                }
-                else
-                {
-                    blockCost.append("wb" + block.getId());
-                    callConstraints.append(
-                        String.format("wb%d = %s +",
-                                      block.getId(),
-                                      model.getPositiveBlockCost(block)));
-                    for (Map.Entry<String, FunctionCallInformation> entry :
-                         callInfo.entrySet())
-                    {
-                        callConstraints.append(" ");
-                        callConstraints.append(entry.getKey());
-                        callConstraints.append(" ");
-                        callConstraints.append(entry.getValue().callCount);
-                    }
-                    callConstraints.append(";\n");
 
-                    functionsCalled.addAll(callInfo.keySet());
-                }
-                blockCost.append(" b" + block.getId());
-
+                // Add the block cost to the top level formula
+                blockCost.append("wb" + block.getId() + " b" + block.getId());
                 for (BranchTarget edge : block.getEdges())
                 {
                     String neg = model.getNegativeEdgeCost(edge);
@@ -619,6 +597,22 @@ public class ISAFunction
                     }
                 }
 
+                // Add to the block weight variable
+                blockWeights.append(
+                    String.format("wb%d = %s",
+                                  block.getId(),
+                                  model.getPositiveBlockCost(block)));
+                for (Map.Entry<String, FunctionCallInformation> entry :
+                     callInfo.entrySet())
+                {
+                    blockWeights.append(" + ");
+                    blockWeights.append(entry.getKey());
+                    blockWeights.append(" ");
+                    blockWeights.append(entry.getValue().callCount);
+                }
+                blockWeights.append(";\n");
+
+                functionsCalled.addAll(callInfo.keySet());
                 problem.add(blockCost.toString());
             }
             String intercept = model.getInterceptCost();
@@ -730,7 +724,7 @@ public class ISAFunction
             String output = String.format(ILP_TOP_LEVEL,
                                           name,
                                           problemStr,
-                                          callConstraints.toString(),
+                                          blockWeights.toString(),
                                           functionWeights.toString(),
                                           outConstraints.toString(),
                                           inConstraints.toString(),
