@@ -23,11 +23,13 @@ public class ISAModule
 
     private Map<String, ISAFunction> funcMap;
     private String outputDir;
+    private CFGConfiguration config;
 
-    public ISAModule(String outputDir)
+    public ISAModule(String outputDir, CFGConfiguration config)
     {
         this.funcMap = new HashMap<String, ISAFunction>();
         this.outputDir = outputDir;
+        this.config = config;
     }
 
     public void printMissingInfoMessages()
@@ -63,7 +65,10 @@ public class ISAModule
                 continue;
             }
             ISAFunction func = new ISAFunction(
-                Long.parseLong(match.group("address"), 16), size, name);
+                                    Long.parseLong(match.group("address"), 16),
+                                    size,
+                                    name,
+                                    config);
             if (func.parseInstructions(objdump) != 0)
             {
                 failed = true;

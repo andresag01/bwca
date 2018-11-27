@@ -36,6 +36,11 @@ public class ISABlock
         this.dfsPosition = 0;
     }
 
+    public ArrayList<ISALine> getInstructions()
+    {
+        return insts;
+    }
+
     public void setExit(boolean exit)
     {
         this.exit = exit;

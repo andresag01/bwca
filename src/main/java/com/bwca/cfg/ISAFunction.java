@@ -35,6 +35,10 @@ public class ISAFunction
     static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
         + "/* Problem */\n"
         + "max: %s;\n\n"
+        + "/* Function call constraints */\n"
+        + "%s\n"
+        + "/* Function call weights */\n"
+        + "%s\n"
         + "/* Output constraints */\n"
         + "%s\n"
         + "/* Input constraints */\n"
@@ -49,8 +53,12 @@ public class ISAFunction
     private ArrayList<ISABlock> blocks;
     private int nextBlockId;
     private LinkedList<String> infoMsgs;
+    private CFGConfiguration config;
 
-    public ISAFunction(long address, long size, String name)
+    public ISAFunction(long address,
+                       long size,
+                       String name,
+                       CFGConfiguration config)
     {
         // Clear the bottom bit of the address because this is thumb
         this.address = address & ~0x1;
@@ -59,6 +67,7 @@ public class ISAFunction
         this.entry = null;
         this.nextBlockId = 0;
         this.infoMsgs = new LinkedList<String>();
+        this.config = config;
     }
 
     public LinkedList<String> getMissingInfoMessages()
@@ -144,7 +153,7 @@ public class ISAFunction
             }
 
             // Create the instruction
-            ISALine line = new ISALine(address, opcode, body);
+            ISALine line = new ISALine(address, opcode, body, config);
             // Check for missing information
             insts.add(line);
             infoMsgs.addAll(line.getMissingInfoMessages());
@@ -253,9 +262,31 @@ public class ISAFunction
                         // There are no subsequent blocks, this is probably an
                         // exit block, but at the momment the user has to
                         // label these manually
-                        break;
+
+                        if (inst.getOpcode().equals("nop"))
+                        {
+                            // This is almost certainly a padding instruction
+                            // that the compiler added for alignment purposes.
+                            // These are generally nops and do not count in the
+                            // CFG. Simply leave this block unconnected to the
+                            // rest of the graph and it will be cleaned up
+                            // later
+                            break;
+                        }
+
+                        // This situation is rather dodgy because functions
+                        // normally return on a proper branch instruction (to
+                        // the lr register or an appropriate value). At the
+                        // moment we fail
+                        System.out.println("Last block of function '" + name +
+                                           "' terminates in unexpected " +
+                                           "(non-branch) instruction");
+                        System.out.println(blocks.get(i));
+                        System.exit(1);
                     }
-                    // TODO: Initialize the branch target with more information
+
+                    // This is just a regular block that does not manipulate
+                    // the pc, so fall through to the next block
                     blocks.get(i).addEdge(blocks.get(i + 1));
                     break;
 
@@ -485,6 +516,55 @@ public class ISAFunction
         }
     }
 
+    private class FunctionCallInformation
+    {
+        public int callCount;
+        public long targetAddress;
+
+        public FunctionCallInformation(int callCount,
+                                       long targetAddress)
+        {
+            this.callCount = callCount;
+            this.targetAddress = targetAddress;
+        }
+    };
+
+    private Map<String, FunctionCallInformation> getFunctionCalls(
+                                                                ISABlock block)
+    {
+        Map<String, FunctionCallInformation> callInfo =
+                                new HashMap<String, FunctionCallInformation>();
+        FunctionCallInformation info;
+        String functionName;
+        long functionAddress;
+
+        for (ISALine inst : block.getInstructions())
+        {
+            functionName = inst.getTargetFunction();
+            functionAddress = inst.getTargetFunctionAddress();
+
+            if (functionName == null ||
+                inst.getType() != InstructionType.BRANCH_LINK)
+            {
+                // This instruction does not call a function
+                continue;
+            }
+
+            if (callInfo.containsKey(functionName))
+            {
+                info = callInfo.get(functionName);
+                info.callCount++;
+            }
+            else
+            {
+                info = new FunctionCallInformation(1, functionAddress);
+                callInfo.put(functionName, info);
+            }
+        }
+
+        return callInfo;
+    }
+
     public void writeILP(String filename, Model model)
     {
         try
@@ -494,13 +574,40 @@ public class ISAFunction
             StringBuilder outConstraints = new StringBuilder();
             StringBuilder inConstraints = new StringBuilder();
             StringBuilder loopConstraints = new StringBuilder();
+            StringBuilder callConstraints = new StringBuilder();
+            StringBuilder functionWeights = new StringBuilder();
+            Map<String, FunctionCallInformation> callInfo;
+            Set<String> functionsCalled = new HashSet<String>();
 
             // Make the string for the problem
             List<String> problem = new LinkedList<String>();
             for (ISABlock block : blocks)
             {
                 StringBuilder blockCost = new StringBuilder();
-                blockCost.append(model.getPositiveBlockCost(block));
+                callInfo = getFunctionCalls(block);
+                if (callInfo.isEmpty())
+                {
+                    blockCost.append(model.getPositiveBlockCost(block));
+                }
+                else
+                {
+                    blockCost.append("wb" + block.getId());
+                    callConstraints.append(
+                        String.format("wb%d = %s +",
+                                      block.getId(),
+                                      model.getPositiveBlockCost(block)));
+                    for (Map.Entry<String, FunctionCallInformation> entry :
+                         callInfo.entrySet())
+                    {
+                        callConstraints.append(" ");
+                        callConstraints.append(entry.getKey());
+                        callConstraints.append(" ");
+                        callConstraints.append(entry.getValue().callCount);
+                    }
+                    callConstraints.append(";\n");
+
+                    functionsCalled.addAll(callInfo.keySet());
+                }
                 blockCost.append(" b" + block.getId());
 
                 for (BranchTarget edge : block.getEdges())
@@ -613,10 +720,18 @@ public class ISAFunction
                 }
             }
 
+            // Function weights
+            for (String function : functionsCalled)
+            {
+                functionWeights.append(function + " = WEIGHT;\n");
+            }
+
             // Write the data in ILP format
             String output = String.format(ILP_TOP_LEVEL,
                                           name,
                                           problemStr,
+                                          callConstraints.toString(),
+                                          functionWeights.toString(),
                                           outConstraints.toString(),
                                           inConstraints.toString(),
                                           loopConstraints.toString());

@@ -45,7 +45,10 @@ public class ISALine
     static final Pattern REGLIST_BASE =
         Pattern.compile("^(?<baseReg>r[0-7])!?,\\s+(?<regList>.*)$");
 
-    public ISALine(long address, String opcode, String body)
+    public ISALine(long address,
+                   String opcode,
+                   String body,
+                   CFGConfiguration config)
     {
         this.address = address;
         this.opcode = opcode.trim();
@@ -57,7 +60,7 @@ public class ISALine
         this.targetFunctionAddress = 0;
         this.exit = false;
 
-        parseInstruction();
+        parseInstruction(config);
     }
 
     public String toString()
@@ -187,10 +190,17 @@ public class ISALine
         return exit;
     }
 
-    private void parseInstruction()
+    public String getOpcode()
+    {
+        return opcode;
+    }
+
+    private void parseInstruction(CFGConfiguration config)
     {
         String infoMsgFmtBrandDst = "0x%08x %s (unknown branch destination)";
         pred = Predicate.AL;
+
+        exit = config.isExit(address);
 
         Matcher match = B_OPCODE.matcher(opcode);
         if (match.matches())
@@ -308,10 +318,14 @@ public class ISALine
                     if (reg == Register.PC)
                     {
                         type = InstructionType.BRANCH;
-                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                   address,
-                                                   "pop"));
-                        break;
+                        if (!exit)
+                        {
+                            // This instruction is a "return from function"
+                            // branch
+                            infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                       address,
+                                                       "pop"));
+                        }
                     }
                 }
                 break;
@@ -387,17 +401,19 @@ public class ISALine
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BL;
                 parseBranchTargetAddress(body);
-                infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                           address,
-                                           "bl"));
                 break;
 
             case "bx":
                 type = InstructionType.BRANCH;
                 inst = Instruction.BX;
-                infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                           address,
-                                           "bx"));
+                if (!exit)
+                {
+                    // This instruction is a "return from function"
+                    // branch
+                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                               address,
+                                               "bx"));
+                }
                 break;
 
             case "add":
@@ -408,9 +424,12 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                               address,
-                                               "bx"));
+                    if (!exit)
+                    {
+                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                   address,
+                                                   "bx"));
+                    }
                 }
                 break;
 
@@ -422,9 +441,12 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                               address,
-                                               "sub"));
+                    if (!exit)
+                    {
+                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                   address,
+                                                   "sub"));
+                    }
                 }
                 break;
 
@@ -442,9 +464,12 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                               address,
-                                               "cpy"));
+                    if (!exit)
+                    {
+                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                   address,
+                                                   "cpy"));
+                    }
                 }
                 break;
 
@@ -456,9 +481,12 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                               address,
-                                               "mov"));
+                    if (!exit)
+                    {
+                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
+                                                   address,
+                                                   "mov"));
+                    }
                 }
                 break;
 

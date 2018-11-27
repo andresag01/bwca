@@ -16,6 +16,7 @@ import com.bwca.models.WCETModel;
 import com.bwca.models.WCAModel;
 import com.bwca.models.WCMAModel;
 import com.bwca.cfg.ISAModule;
+import com.bwca.cfg.CFGConfiguration;
 
 public class Controller
 {
@@ -35,9 +36,11 @@ public class Controller
     // Command line options
     private String outputDir;
     private String binFile;
+    private String configFile;
     private int fetchWidthBytes;
     private Set<String> selectedModels;
     private List<Model> models;
+    private CFGConfiguration cfgConfig;
 
     public static final String[][] MODELS = {
         { "wcet", "Worst-Case Execution Time" },
@@ -55,7 +58,8 @@ public class Controller
         + "    -m    Analyze the binary file with the specified model.\n"
         + "          Repeat this option as many times as needed to apply \n"
         + "          more than one model. Run the program with -l to view a\n"
-        + "          list of options.";
+        + "          list of options.\n"
+        + "    -c    CFG Configuration file.\n";
 
     public static void main(String[] args)
     {
@@ -68,9 +72,11 @@ public class Controller
     {
         outputDir = null;
         binFile = null;
+        configFile = null;
         selectedModels = new HashSet<String>();
         models = new LinkedList<Model>();
         fetchWidthBytes = 4;
+        cfgConfig = new CFGConfiguration();
     }
 
     private void parseCmdLineArguments(String[] args)
@@ -134,6 +140,15 @@ public class Controller
                     System.exit(0);
                     break;
 
+                case "-c":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-c option takes one argument");
+                        System.exit(1);
+                    }
+                    configFile = args[++i];
+                    break;
+
                 default:
                     System.out.println("Unrecognized option " + args[i]);
                     System.exit(1);
@@ -178,6 +193,7 @@ public class Controller
                     break;
             }
         }
+        cfgConfig.loadFile(configFile);
 
         if (fail)
         {
@@ -265,7 +281,7 @@ public class Controller
         }
 
         System.out.println("Generating CFG");
-        ISAModule module = new ISAModule(outputDir);
+        ISAModule module = new ISAModule(outputDir, cfgConfig);
         if (module.parseFunctions(readelf, objdump) != 0)
         {
             module.printMissingInfoMessages();
