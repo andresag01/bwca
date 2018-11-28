@@ -45,12 +45,14 @@ public class WCAModel extends Model
             builder.append((i + 1 >= wfi.get(block)) ? "" : " +\n    ");
         }
 
+        builder.append((builder.length() == 0) ? "0" : "");
+
         for (int i = 0; i < malloc.get(block); i++)
         {
             builder.append(" +\n    " + "BOUND_MALLOC" + i);
         }
 
-        return (builder.length() == 0) ? "0" : builder.toString();
+        return builder.toString();
     }
 
     public String getNegativeEdgeCost(BranchTarget edge)
