@@ -279,9 +279,9 @@ def main(indir, entry_func, outdir):
                 result += str(model_result)
             result += "\n"
 
-            if model_name == "wcma":
+            if model_name == "wcma" and model_result is not None:
                 wcma = math.ceil(model_result)
-            elif model_name == "wcet":
+            elif model_name == "wcet" and model_result is not None:
                 wcet = math.ceil(model_result)
 
         # Write the GC interval for every function (even though this is only
