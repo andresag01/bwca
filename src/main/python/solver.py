@@ -290,6 +290,10 @@ def main(indir, entry_func, outdir):
         if wcet is None or wcma is None:
             result += "UNAVAILABLE"
         else:
+            if wcet < wcma:
+                print("Inconsistency for {0}: wcet ({1}) < wcma ({2})".format(
+                    key, wcet, wcma))
+                sys.exit(1)
             result += "{0}".format(wcet - wcma)
         result += "\n"
 
