@@ -7,6 +7,7 @@ import re
 import subprocess
 import ast
 import operator as op
+import math
 
 # Supported operators
 operators = {
@@ -261,11 +262,36 @@ def main(indir, entry_func, outdir):
     # Write global results to a file
     result = ""
     for key, func in funcs.items():
-        result +="Function {0}{1}:\n".format(key,
-            " (entry)" if key == entry_func else "")
+        result += "Function {0}".format(key)
+        if key == entry_func:
+            result += " (entry)"
+        result += ":\n"
+
+        wcma = None
+        wcet = None
+
+        # Write the results for each of the models
         for model_name, model_result in func.results.items():
-            result += "    - {0}: {1}\n".format(model_name,
-                "UNAVAILABLE" if model_result is None else model_result)
+            result += "    - {0}: ".format(model_name)
+            if model_result is None:
+                result += "UNAVAILABLE"
+            else:
+                result += str(model_result)
+            result += "\n"
+
+            if model_name == "wcma":
+                wcma = math.ceil(model_result)
+            elif model_name == "wcet":
+                wcet = math.ceil(model_result)
+
+        # Write the GC interval for every function (even though this is only
+        # meaningful for the entry)
+        result += "    - I_GC: "
+        if wcet is None or wcma is None:
+            result += "UNAVAILABLE"
+        else:
+            result += "{0}".format(wcet - wcma)
+        result += "\n"
 
     print(result, end="")
 
