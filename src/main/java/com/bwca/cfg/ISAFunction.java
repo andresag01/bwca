@@ -273,6 +273,14 @@ public class ISAFunction
                             // later
                             break;
                         }
+                        else if (name.equals("success") &&
+                                 inst.getOpcode().equals("bkpt"))
+                        {
+                            // This is the "special" success() function that
+                            // terminates in a bkpt instruction and indicates
+                            // success for the simulator
+                            break;
+                        }
 
                         // This situation is rather dodgy because functions
                         // normally return on a proper branch instruction (to
