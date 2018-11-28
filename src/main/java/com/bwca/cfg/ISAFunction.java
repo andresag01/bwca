@@ -417,6 +417,8 @@ public class ISAFunction
         // Initialize everything to zero/null/false
         for (ISABlock block : blocks)
         {
+            block.setIntermediateLoopBranch(false);
+            block.setLoopBranch(false);
             block.setLoopHeader(false);
             block.setInnerLoopHeader(null);
             block.setDFSPosition(0);
@@ -438,6 +440,23 @@ public class ISAFunction
             {
                 // Case A
                 ISABlock nh = traverseInDFS(successor, dfsPosition + 1);
+                if (successor.isIntermediateLoopBranch())
+                {
+                    if (block.getLastLine().getType() !=
+                        InstructionType.COND_BRANCH)
+                    {
+                        // This can happen if there are two intermediate blocks
+                        // my suspicion is that we just need to tag this block
+                        // as an intermediateLoopBranch and recurse back until
+                        // we find the conditional branch block. However, I
+                        // have not found a program that has this structure in
+                        // the code yet and I am not sure it works
+                        System.out.println("Failed to identify loop branch " +
+                            "block\n");
+                        System.exit(1);
+                    }
+                    block.setLoopBranch(true);
+                }
                 tagLoopHeader(block, nh);
             }
             else
@@ -446,7 +465,26 @@ public class ISAFunction
                 {
                     // Case B
                     successor.setLoopHeader(true);
-                    block.setLoopBranch(true);
+                    // We found the block that loops back to the beginning of
+                    // the next iteration. The problem is that the current
+                    // block can either be the conditional branch or some other
+                    // intermediate block (e.g. the branch back is too long and
+                    // the compiler put in an unconditional branch in between).
+                    // To get around this problem, we check this block ends in
+                    // a conditional branch. If this is the case, then we know
+                    // this is the correct branch block of the loop. Otherwise,
+                    // we label the block as intermediate and let the previous
+                    // recursive calls identify which one of them has the
+                    // correct branch block (check case A)
+                    if (block.getLastLine().getType() ==
+                        InstructionType.COND_BRANCH)
+                    {
+                        block.setLoopBranch(true);
+                    }
+                    else
+                    {
+                        block.setIntermediateLoopBranch(true);
+                    }
                     tagLoopHeader(block, successor);
                 }
                 else if (successor.getInnerLoopHeader() == null)
