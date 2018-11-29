@@ -248,14 +248,15 @@ def main(indir, entry_func, outdir):
         print("Failed to check for recursion!")
         sys.exit(1)
 
-    # Solve ILP for each of the functions
-    if os.path.isdir(outdir):
-        print("Output directory exists, please delete it")
-        sys.exit(1)
     # Create output directories
-    os.mkdir(outdir)
+    if not os.path.isdir(outdir):
+        os.mkdir(outdir)
     for key, func in funcs.items():
-        os.mkdir(os.path.join(outdir, key))
+        path = os.path.join(outdir, key)
+        if not os.path.isdir(path):
+            os.mkdir(path)
+
+    # Solve ILP for each of the functions
     visited_funcs = set([])
     funcs[entry_func].solve_ilp(visited_funcs)
 
