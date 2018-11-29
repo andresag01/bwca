@@ -31,35 +31,63 @@ def eval_(node):
         raise TypeError(node)
 
 class Function:
-    FUNC_WEIGHTS_PATTERN = re.compile(r'^(?P<funcName>[a-zA-Z_]\w*)\s+=\s+WEIGHT;$')
-    LP_SOLVE_RES_PATTERN = re.compile(r'^Value of objective function:\s+(?P<cost>\d+(\.\d+)?)$')
+    FUNC_WEIGHTS_PATTERN = re.compile(r'^(?P<funcName>[a-zA-Z_]\w*)\s+=' +
+        r'\s+WEIGHT;$')
+
     LP_MAX_PROBLEM_PATTERN = re.compile(r'max:\s+[a-zA-Z_]\w*\s+[a-zA-Z_]\w*' +
         r'(\s+\+\s+[a-zA-Z_]\w*\s+[a-zA-Z_]\w*|' +
         r'\s+-\s+[0-9]+(\.[0-9]+)?\s+[a-zA-Z_]\w*)*;')
+    LP_LOCAL_PATTERN = re.compile(r'/\* Block weights \*/')
+    LP_CONSTRAINTS_PATTERN = re.compile(r'/\* Output constraints \*/')
+    LP_BLOCK_WEIGHTS_PATTERN = re.compile(
+        r'(?P<weightName>[a-zA-Z_]\w*_wb\d+)\s+=\s+' +
+        r'(?P<weightVal>[\+-]?\s*[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?' +
+        r'(\s+[\+-]\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?)*);')
+    LP_MULTIPLICATION_PATTERN = re.compile(r'(?P<lhs>[0-9]+(\.[0-9]+)?)\s+' +
+        r'(?P<rhs>[0-9]+(\.[0-9]+)?)')
+
+    LP_SOLVE_RES_PATTERN = re.compile(r'^Value of objective function:\s+' +
+        r'(?P<cost>\d+(\.\d+)?)$')
+    LP_SOLVE_COUNT_PATTERN = re.compile(
+        r'^(?P<name>[be]\d+)\s+(?P<count>\d+)$')
 
     def __init__(self, name, in_dir_path, out_dir_path):
         self.name = name
         self.in_dir_path = in_dir_path
         self.out_dir_path = out_dir_path
-        self.deps = []
+        self.deps = set([])
         self.models = {
             "wcma": self.read_file(os.path.join(self.in_dir_path, "wcma.lp")),
             "wcet": self.read_file(os.path.join(self.in_dir_path, "wcet.lp")),
             "wca": self.read_file(os.path.join(self.in_dir_path, "wca.lp")),
+        }
+        self.models_combined = {
+            "wcet_wcma": "/* ILP for function " + self.name + " */\n\n" +
+                "min: {wcet_func}\n" +
+                "     - {wcma_func};\n\n" +
+                "/**** Constraints ****/\n" +
+                "{global_constraints}\n\n" +
+                "/**** WCET ****/\n" +
+                "{wcet_local}\n\n" +
+                "/**** WCMA ****/\n" +
+                "{wcma_local}",
         }
         self.results = {
             "wcma": None,
             "wcet": None,
             "wca": None,
         }
+        self.results_combined = {
+            "value": None,
+            "counts": None,
+        }
 
-        # Check that at least one of the models is available
+        # Check that all models are available
         for key, model in self.models.items():
-            if model is not None:
-                return
-
-        print("No static analysis models available to solve!")
-        sys.exit(1)
+            if model is None:
+                print("Model for {0} is not available for function {1}".format(
+                    key, self.name))
+                sys.exit(1)
 
     def __str__(self):
         return "name:{0} deps:[{1}]".format(self.name,
@@ -90,7 +118,7 @@ class Function:
             match = Function.FUNC_WEIGHTS_PATTERN.match(line)
             if not match:
                 continue
-            self.deps.append(funcs[match.group("funcName")])
+            self.deps.add(funcs[match.group("funcName")])
 
     def check_recursion(self, visited_funcs):
         for func in self.deps:
@@ -101,76 +129,250 @@ class Function:
             func.check_recursion(visited_funcs)
             visited_funcs.remove(func.name)
 
-    def set_func_weight(self, func):
-        # Replace the WEIGHT string for the actual value of each function
-        pattern = re.compile(r'' + func.name + '\s+=\s+WEIGHT;')
-        for model_name in self.models.keys():
-            if self.models[model_name] is None:
-                continue
-            repl = "{0} = {1};".format(func.name, func.results[model_name])
-            # Substitute the keyword WEIGHT in the lp file
-            self.models[model_name] = pattern.sub(repl,
-                self.models[model_name])
-            # Substitute the occurrence of the function name in the lp file
-            repl = str(func.results[model_name])
-            cnt = self.models[model_name].count(func.name) - 1
-            self.models[model_name] = self.models[model_name].replace(func.name,
-                repl, cnt)
+    def solve_ilp(self, visited_funcs):
+        if self.name in visited_funcs:
+            # We have already processed this function
+            return
 
-    def set_block_weights(self):
-        for model_name in self.models.keys():
-            # Match the max problem
-            match = Function.LP_MAX_PROBLEM_PATTERN.search(
-                self.models[model_name])
+        visited_funcs.add(self.name)
+
+        # Solve all the dependencies of this function
+        for dep in self.deps:
+            dep.solve_ilp(visited_funcs)
+
+        print("Processing " + self.name)
+
+        ######################################################################
+
+        ##########################
+        # Replace function weights
+        ##########################
+        for dep in self.deps:
+            self.models["wcet"] = self.substitute_func_weight(
+                "wcet", self.models["wcet"], dep.name, dep.results["wcet"])
+            self.models["wcma"] = self.substitute_func_weight(
+                "wcma", self.models["wcma"], dep.name, dep.results["wcma"])
+            self.models["wca"] = self.substitute_func_weight(
+                "wca", self.models["wca"], dep.name, dep.results["wca"])
+
+        ######################################################################
+
+        #########################
+        # Solve for WCET and WCMA
+        #########################
+        wcet_local = self.extract_local_info(self.models["wcet"])
+        wcet_weights = self.extract_block_weights(self.models["wcet"])
+        wcet_problem = self.extract_problem(
+            self.models["wcet"])[4:-1].strip()
+        wcet_problem = self.substitute_weights(wcet_problem, wcet_weights)
+        wcet_problem = self.strip_prefix(wcet_problem, "wcet_")
+
+        wcma_local = self.extract_local_info(self.models["wcma"])
+        wcma_weights = self.extract_block_weights(self.models["wcma"])
+        wcma_problem = self.extract_problem(
+            self.models["wcma"])[4:-1].strip()
+        wcma_problem = self.substitute_weights(wcma_problem, wcma_weights)
+        wcma_problem = self.strip_prefix(wcma_problem, "wcma_")
+        wcma_problem_cpy = wcma_problem
+        wcma_problem = self.reverse_sign(wcma_problem)
+
+        constraints = self.extract_constraints(self.models["wcma"])
+        constraints = self.strip_prefix(constraints, "wcma_")
+
+        self.models_combined["wcet_wcma"] = \
+            self.models_combined["wcet_wcma"].format(
+                wcet_func=wcet_problem,
+                wcma_func=wcma_problem,
+                global_constraints=constraints,
+                wcet_local=wcet_local,
+                wcma_local=wcma_local)
+
+        outfilename = os.path.join(self.out_dir_path, "wcet_wcma" + ".lp")
+        self.write_file(outfilename, self.models_combined["wcet_wcma"])
+
+        # Solve the combined file
+        outlpsolve = os.path.join(self.out_dir_path, "wcet_wcma" + ".log")
+        self.run_lp_solve(outfilename, outlpsolve)
+
+        # Extract the results
+        lpoutput = self.read_file(outlpsolve)
+        self.results_combined["value"], self.results_combined["counts"] = \
+            self.extract_result(lpoutput)
+
+        ######################################################################
+
+        ################
+        # Solve for WCET
+        ################
+        wcet_problem = wcet_problem.replace("\n", "")
+        wcet_problem = self.substitute_block_counts(wcet_problem)
+        self.results["wcet"] = eval_expr(wcet_problem)
+        outfilename = os.path.join(self.out_dir_path, "wcet" + ".lp")
+        self.write_file(outfilename, self.models["wcet"])
+
+        ################
+        # Solve for WCMA
+        ################
+        wcma_problem = wcma_problem_cpy
+        wcma_problem = wcma_problem.replace("\n", "")
+        wcma_problem = self.substitute_block_counts(wcma_problem)
+        self.results["wcma"] = eval_expr(wcma_problem)
+        outfilename = os.path.join(self.out_dir_path, "wcma" + ".lp")
+        self.write_file(outfilename, self.models["wcma"])
+
+        ################
+        # Solve for WCA
+        ################
+        wca_weights = self.extract_block_weights(self.models["wca"])
+        self.models["wca"] = self.substitute_weights(self.models["wca"],
+            wca_weights)
+
+        outfilename = os.path.join(self.out_dir_path, "wca" + ".lp")
+        self.write_file(outfilename, self.models["wca"])
+
+        outlpsolve = os.path.join(self.out_dir_path, "wca" + ".log")
+        self.run_lp_solve(outfilename, outlpsolve)
+        lpoutput = self.read_file(outlpsolve)
+        self.results["wca"] = self.extract_result_only(lpoutput)
+
+        ######################################################################
+
+    def extract_result_only(self, src):
+        for line in src.split("\n"):
+            match = Function.LP_SOLVE_RES_PATTERN.match(line)
+            if match:
+                return float(match.group("cost"))
+
+        print("Result was not matched!")
+        sys.exit(1)
+
+    def extract_result(self, src):
+        result = None
+        counts = {}
+
+        for line in src.split("\n"):
+            match = Function.LP_SOLVE_RES_PATTERN.match(line)
+            if match:
+                if result is not None:
+                    print("Result matches multiple times!")
+                    sys.exit(1)
+                result = float(match.group("cost"))
+
+            match = Function.LP_SOLVE_COUNT_PATTERN.match(line)
+            if match:
+                name = match.group("name")
+                count = match.group("count")
+                if name in counts:
+                    print("Result name more than once in log output")
+                    sys.exit(1)
+                counts[name] = int(count)
+
+        if result is None or len(counts) < 1:
+            print("Did not find solution in log file")
+            sys.exit(1)
+        return (result, counts)
+
+    def extract_local_info(self, src):
+        match = Function.LP_LOCAL_PATTERN.search(src)
+        if not match:
+            print("Failed to match local info")
+            print(src)
+            sys.exit(1)
+        start = match.start()
+
+        match = Function.LP_CONSTRAINTS_PATTERN.search(src)
+        if not match:
+            print("Failed to match start of constraints")
+            print(src)
+            sys.exit(1)
+        end = match.start()
+
+        return src[start:end].strip()
+
+    def extract_problem(self, src):
+        match = Function.LP_MAX_PROBLEM_PATTERN.search(src)
+        if not match:
+            print("Failed to match problem")
+            print(src)
+            sys.exit(1)
+        return src[match.start():match.end()]
+
+    def extract_constraints(self, src):
+        match = Function.LP_CONSTRAINTS_PATTERN.search(src)
+        if not match:
+            print("Failed to match start of constraints")
+            print(src)
+            sys.exit(1)
+        return src[match.start():].strip()
+
+    def strip_prefix(self, src, pfix):
+        return src.replace(pfix, "")
+
+    def extract_block_weights(self, src):
+        weights = {}
+        search_offset = 0
+
+        while search_offset < len(src):
+            # Find the start position of the next weight
+            match = Function.LP_BLOCK_WEIGHTS_PATTERN.search(
+                src[search_offset:])
             if not match:
-                print("Failed to match problem for " + self.name + " and " +
-                    model_name)
-                sys.exit(1)
-            problem = self.models[model_name][match.start():match.end()]
-
-            # Look up the constant names for every block weight
-            index = 0
-            while True:
-                pattern = re.compile(model_name + r'_wb' + str(index))
-                if pattern.search(problem):
-                    index += 1
-                    continue
+                # We are done, no more weights
                 break
 
-            for i in range(0, index):
-                # Look Up the expression for each constant block weight
-                pattern = re.compile(model_name + r'_wb' + str(i) +
-                    r'\s+=\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?' +
-                    r'(\s+[\+-]\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?)*;')
-                match = pattern.search(self.models[model_name])
+            # Increase the search offset
+            search_offset += match.end()
+
+            # Extract the weight we just found
+            name = match.group("weightName")
+            val = match.group("weightVal")
+
+            # Replace the space operator for multiplication (*)
+            while True:
+                match = Function.LP_MULTIPLICATION_PATTERN.search(val)
                 if not match:
-                    print("Failed to match block weight for " + self.name +
-                        " and " + model_name)
-                    sys.exit(1)
-                weight = self.models[model_name][match.start():match.end()]
-                weight = weight.replace("\n", " ")
+                    break
+                val = Function.LP_MULTIPLICATION_PATTERN.sub(match.group("lhs")
+                    + " * " + match.group("rhs"), val)
 
-                # Replace the space operator for multiplication (*)
-                pattern = re.compile(r'(?P<lhs>[0-9]+(\.[0-9]+)?)\s+' +
-                    r'(?P<rhs>[0-9]+(\.[0-9]+)?)')
-                while True:
-                    match = pattern.search(weight)
-                    if not match:
-                        break
-                    weight = pattern.sub(match.group("lhs") + " * " +
-                        match.group("rhs"), weight)
+            # Evaluate the expression
+            weights[name] = eval_expr(val)
 
-                # Remove the assignment operator and semicolon
-                weight = weight.strip()
-                weight = weight[weight.find("=") + 1:-1]
-                weight = weight.strip()
+        if len(weights) == 0:
+            print("Could not find any weights")
+            sys.exit(1)
 
-                # Evaluate the expression
-                const = eval_expr(weight)
+        return weights
 
-                # Replace the block weight with the evaluated constant
-                self.models[model_name] = self.models[model_name].replace(
-                    model_name + "_wb" + str(i), str(const), 1)
+    def substitute_func_weight(self, model_name, model, func_name,
+        func_weight):
+        # Replace the WEIGHT string for the actual value of each function
+        pattern = re.compile(r'' + func_name + '\s+=\s+WEIGHT;')
+        repl = "{0}_{1} = {2};".format(model_name, func_name, func_weight)
+        model = pattern.sub(repl, model)
+
+        # Substitute the occurrence of the function name in the lp file
+        cnt = model.count(func_name) - 1
+        return model.replace(func_name, str(func_weight), cnt)
+
+    def substitute_weights(self, src, weights):
+        for name in sorted(weights.keys(), key=len, reverse=True):
+            val = weights[name]
+            src = src.replace(name, str(val), 1)
+        return src
+
+    def substitute_block_counts(self, src):
+        counts = self.results_combined["counts"]
+        for name in sorted(counts.keys(), key=len, reverse=True):
+            val = counts[name]
+            src = src.replace(name, "* " + str(val), 1)
+        return src
+
+    def reverse_sign(self, src):
+        src = src.replace("+", "%")
+        src = src.replace("-", "+")
+        src = src.replace("%", "-")
+        return src
 
     def run_lp_solve(self, lp_filename, out_filename):
         # Run the lp_solve application and parse the result
@@ -183,40 +385,6 @@ class Function:
                 print("lp_solve call failed. Failure message at " +
                     out_filename)
                 sys.exit(1)
-
-        with open(out_filename, "r") as f:
-            for line in f.readlines():
-                match = Function.LP_SOLVE_RES_PATTERN.match(line)
-                if not match:
-                    continue
-                return float(match.group("cost"))
-
-        print("Could not match lp_solve result in " + out_filename)
-        sys.exit(1)
-
-    def solve_ilp(self, visited_funcs):
-        if self.name in visited_funcs:
-            # We have already processed this function
-            return False
-
-        visited_funcs.add(self.name)
-
-        # Solve all the dependencies of this function
-        for dep in self.deps:
-            if dep.solve_ilp(visited_funcs):
-                self.set_func_weight(dep)
-
-        # Replace the block weight variables by constants
-        self.set_block_weights()
-
-        # Solve for this function
-        for model_name, model in self.models.items():
-            outfilename = os.path.join(self.out_dir_path, model_name + ".lp")
-            outlpsolve = os.path.join(self.out_dir_path, model_name + ".log")
-            self.write_file(outfilename, model)
-            self.results[model_name] = self.run_lp_solve(outfilename, outlpsolve)
-
-        return True
 
 def main(indir, entry_func, outdir):
     # Sanity check the input arguments
@@ -235,6 +403,10 @@ def main(indir, entry_func, outdir):
 
         # Load the function information
         funcs[item] = Function(item, inpath, outpath)
+
+    if entry_func not in funcs:
+        print("Entry point function " + entry_func + " is not available")
+        sys.exit(1)
 
     # Build a dependency list for each function
     for name, func in funcs.items():
@@ -268,9 +440,6 @@ def main(indir, entry_func, outdir):
             result += " (entry)"
         result += ":\n"
 
-        wcma = None
-        wcet = None
-
         # Write the results for each of the models
         for model_name in sorted(func.results.keys()):
             model_result = func.results[model_name]
@@ -281,22 +450,13 @@ def main(indir, entry_func, outdir):
                 result += str(model_result)
             result += "\n"
 
-            if model_name == "wcma" and model_result is not None:
-                wcma = math.ceil(model_result)
-            elif model_name == "wcet" and model_result is not None:
-                wcet = math.ceil(model_result)
-
         # Write the GC interval for every function (even though this is only
         # meaningful for the entry)
         result += "    - I_GC: "
-        if wcet is None or wcma is None:
+        if func.results_combined["value"] is None:
             result += "UNAVAILABLE"
         else:
-            if wcet < wcma:
-                print("Inconsistency for {0}: wcet ({1}) < wcma ({2})".format(
-                    key, wcet, wcma))
-                sys.exit(1)
-            result += "{0}".format(wcet - wcma)
+            result += "{0}".format(func.results_combined["value"])
         result += "\n"
 
     print(result, end="")
