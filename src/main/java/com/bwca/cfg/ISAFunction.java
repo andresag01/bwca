@@ -625,6 +625,10 @@ public class ISAFunction
             Map<String, FunctionCallInformation> callInfo;
             Set<String> functionsCalled = new HashSet<String>();
 
+            String blockPfix = model.getName() + "_b";
+            String weightPfix = model.getName() + "_wb";
+            String edgePfix = model.getName() + "_e";
+
             // Make the string for the problem
             List<String> problem = new LinkedList<String>();
             for (ISABlock block : blocks)
@@ -633,19 +637,22 @@ public class ISAFunction
                 callInfo = getFunctionCalls(block);
 
                 // Add the block cost to the top level formula
-                blockCost.append("wb" + block.getId() + " b" + block.getId());
+                blockCost.append(weightPfix + block.getId() + " " +
+                                 blockPfix + block.getId());
                 for (BranchTarget edge : block.getEdges())
                 {
                     String neg = model.getNegativeEdgeCost(edge);
                     if (neg != null)
                     {
-                        blockCost.append(" - " + neg + " e" + edge.getId());
+                        blockCost.append(" - " + neg + " " + edgePfix +
+                                         edge.getId());
                     }
                 }
 
                 // Add to the block weight variable
                 blockWeights.append(
-                    String.format("wb%d = %s",
+                    String.format("%s%d = %s",
+                                  weightPfix,
                                   block.getId(),
                                   model.getPositiveBlockCost(block)));
                 for (Map.Entry<String, FunctionCallInformation> entry :
@@ -675,7 +682,7 @@ public class ISAFunction
             // Output constraints
             for (ISABlock block : blocks)
             {
-                outConstraints.append("b" + block.getId() + " = ");
+                outConstraints.append(blockPfix + block.getId() + " = ");
                 if (block.getEdges().size() == 0)
                 {
                     if (!block.isExit())
@@ -693,7 +700,7 @@ public class ISAFunction
                 List<String> outEdges = new LinkedList<String>();
                 for (BranchTarget edge : block.getEdges())
                 {
-                    outEdges.add("e" + edge.getId());
+                    outEdges.add(edgePfix + edge.getId());
 
                     ISABlock target = edge.getBlock();
                     List<String> inEdgeList = inEdges.get(target);
@@ -702,7 +709,7 @@ public class ISAFunction
                         inEdgeList = new LinkedList<String>();
                         inEdges.put(target, inEdgeList);
                     }
-                    inEdgeList.add("e" + edge.getId());
+                    inEdgeList.add(edgePfix + edge.getId());
                 }
                 outConstraints.append(String.join(" + ", outEdges) + ";\n");
             }
@@ -726,7 +733,7 @@ public class ISAFunction
                     edges = new LinkedList<String>();
                 }
 
-                inConstraints.append("b" + block.getId() + " = ");
+                inConstraints.append(blockPfix + block.getId() + " = ");
 
                 if (block == entry)
                 {
@@ -746,13 +753,17 @@ public class ISAFunction
                         {
                             // This is the exit edge of the loop
                             String constraint =
-                                String.format("b%d >= BOUND e%d;\n",
+                                String.format("%s%d >= BOUND %s%d;\n",
+                                              blockPfix,
                                               block.getId(),
+                                              edgePfix,
                                               edge.getId());
                             loopConstraints.append(constraint);
 
-                            constraint = String.format("b%d <= BOUND e%d;\n",
+                            constraint = String.format("%s%d <= BOUND %s%d;\n",
+                                                       blockPfix,
                                                        block.getId(),
+                                                       edgePfix,
                                                        edge.getId());
                             loopConstraints.append(constraint);
                         }

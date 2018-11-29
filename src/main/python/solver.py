@@ -131,7 +131,7 @@ class Function:
             # Look up the constant names for every block weight
             index = 0
             while True:
-                pattern = re.compile(r'wb' + str(index))
+                pattern = re.compile(model_name + r'_wb' + str(index))
                 if pattern.search(problem):
                     index += 1
                     continue
@@ -139,7 +139,7 @@ class Function:
 
             for i in range(0, index):
                 # Look Up the expression for each constant block weight
-                pattern = re.compile(r'wb' + str(i) +
+                pattern = re.compile(model_name + r'_wb' + str(i) +
                     r'\s+=\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?' +
                     r'(\s+[\+-]\s+[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?)*;')
                 match = pattern.search(self.models[model_name])
@@ -170,7 +170,7 @@ class Function:
 
                 # Replace the block weight with the evaluated constant
                 self.models[model_name] = self.models[model_name].replace(
-                    "wb" + str(i), str(const), 1)
+                    model_name + "_wb" + str(i), str(const), 1)
 
     def run_lp_solve(self, lp_filename, out_filename):
         # Run the lp_solve application and parse the result
@@ -261,7 +261,7 @@ def main(indir, entry_func, outdir):
 
     # Write global results to a file
     result = ""
-    for key, func in funcs.items():
+    for key, func in sorted(funcs.items()):
         result += "Function {0}".format(key)
         if key == entry_func:
             result += " (entry)"
@@ -271,7 +271,8 @@ def main(indir, entry_func, outdir):
         wcet = None
 
         # Write the results for each of the models
-        for model_name, model_result in func.results.items():
+        for model_name in sorted(func.results.keys()):
+            model_result = func.results[model_name]
             result += "    - {0}: ".format(model_name)
             if model_result is None:
                 result += "UNAVAILABLE"
