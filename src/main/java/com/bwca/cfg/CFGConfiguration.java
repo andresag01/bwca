@@ -20,6 +20,7 @@ public class CFGConfiguration
         Pattern.compile("^branch\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
+    static final Pattern CMD_COMMENT = Pattern.compile("^#.*$");
 
     Map<Long, BranchTarget> branchTargets;
     Set<Long> exits;
@@ -50,6 +51,18 @@ public class CFGConfiguration
                 if (line == null)
                 {
                     break;
+                }
+                else if (line.length() == 0)
+                {
+                    /* Skip over empty lines */
+                    continue;
+                }
+
+                match = CMD_COMMENT.matcher(line);
+                if (match.matches())
+                {
+                    /* Skip over comments */
+                    continue;
                 }
 
                 match = CMD_EXIT.matcher(line);
