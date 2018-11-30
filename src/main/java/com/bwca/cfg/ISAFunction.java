@@ -267,7 +267,7 @@ public class ISAFunction
             dummyBlock.setExit(true);
 
             // Add a fake instruction that represents a function call
-            dummyBlock.addLine(new ISALine(address,
+            dummyBlock.addLine(new ISALine(entry.getKey(),
                                            "func_call",
                                            entry.getValue(),
                                            true,
@@ -665,7 +665,6 @@ public class ISAFunction
         for (ISALine inst : block.getInstructions())
         {
             functionName = inst.getTargetFunction();
-            functionAddress = inst.getTargetFunctionAddress();
 
             if (functionName == null)
             {
@@ -686,6 +685,8 @@ public class ISAFunction
                                    + "unexpected type");
                 System.exit(1);
             }
+
+            functionAddress = inst.getTargetFunctionAddress();
 
             if (callInfo.containsKey(functionName))
             {

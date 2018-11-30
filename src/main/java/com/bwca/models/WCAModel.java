@@ -81,15 +81,21 @@ public class WCAModel extends Model
             // GETM instruction
             wfiCost += 1;
         }
-        else if (inst.getType() == InstructionType.BRANCH_LINK)
+
+        String targetFunc = inst.getTargetFunction();
+        if (targetFunc != null && (targetFunc.contains("malloc") ||
+            targetFunc.contains("calloc") || targetFunc.contains("realloc")))
         {
-            String targetFunc = inst.getTargetFunction();
-            if (targetFunc != null &&
-                (targetFunc.contains("malloc") ||
-                 targetFunc.contains("calloc") ||
-                 targetFunc.contains("realloc")))
+            switch (inst.getType())
             {
-                mallocCost += 1;
+                case BRANCH_LINK:
+                    mallocCost += 1;
+                    break;
+
+                default:
+                    System.out.println("Branching to malloc, realloc or "
+                                       + "calloc without link");
+                    System.exit(1);
             }
         }
 

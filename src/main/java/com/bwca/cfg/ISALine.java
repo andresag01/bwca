@@ -19,7 +19,7 @@ public class ISALine
     private Predicate pred;
 
     private String targetFunction;
-    private long targetFunctionAddress;
+    private Long targetFunctionAddress;
 
     private Instruction inst;
 
@@ -58,7 +58,7 @@ public class ISALine
         this.regList = new ArrayList<Register>();
         this.infoMsgs = new LinkedList<String>();
         this.targetFunction = null;
-        this.targetFunctionAddress = 0;
+        this.targetFunctionAddress = null;
         this.exit = false;
 
         parseInstruction(config);

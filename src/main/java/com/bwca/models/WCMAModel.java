@@ -261,7 +261,7 @@ public class WCMAModel extends Model
                 // following instructions in the fetch buffer
                 cost.addFetch(costOfBranchDiscard(instAddress));
                 // Only add part of the fetch cost depending on alignment
-                targetAddress = inst.getTargetFunctionAddress();
+                targetAddress = inst.getBranchTarget(true).getAddress();
                 cost.addFetch(costOfFetchingBranchTarget(targetAddress));
                 break;
 
@@ -322,7 +322,7 @@ public class WCMAModel extends Model
         long instAddress = inst.getAddress();
         cost += costOfBranchDiscard(instAddress);
         // Only add part of the fetch cost depending on alignment
-        long targetAddress = inst.getTargetFunctionAddress();
+        long targetAddress = inst.getBranchTarget(true).getAddress();
         cost += costOfFetchingBranchTarget(targetAddress);
 
         // Dont include the cost of fetching and executing this branch as a NOP
