@@ -21,19 +21,40 @@ public class CFGConfiguration
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
     static final Pattern CMD_COMMENT = Pattern.compile("^#.*$");
+    static final Pattern CMD_FUNC = Pattern.compile("^function\\s+"
+                                                    + "(?<name>[a-zA-Z_]\\w*)"
+                                                    + "\\s+(?<size>\\d+)$");
 
-    Map<Long, BranchTarget> branchTargets;
-    Set<Long> exits;
+    private Map<Long, BranchTarget> branchTargets;
+    private Set<Long> exits;
+    private Map<String, Long> funcs;
 
     public CFGConfiguration()
     {
         branchTargets = new HashMap<Long, BranchTarget>();
         exits = new HashSet<Long>();
+        funcs = new HashMap<String, Long>();
     }
 
     public boolean isExit(long address)
     {
         return exits.contains(address);
+    }
+
+    public Map<String, Long> getFunctions()
+    {
+        return funcs;
+    }
+
+    private long strToLong(String str)
+    {
+        int base = 10;
+        if (str.length() > 2 && str.matches("^0[xX].+$"))
+        {
+            base = 16;
+            str = str.substring(2);
+        }
+        return Long.parseLong(str, base);
     }
 
     public void loadFile(String filename)
@@ -65,42 +86,33 @@ public class CFGConfiguration
                     continue;
                 }
 
+                match = CMD_FUNC.matcher(line);
+                if (match.matches())
+                {
+                    String name = match.group("name");
+                    long size = strToLong(match.group("size"));
+                    if (funcs.put(name, size) != null)
+                    {
+                        System.out.printf("Function %s more than once in "
+                                          + "config\n",
+                                          name);
+                        System.exit(1);
+                    }
+                    continue;
+                }
+
                 match = CMD_EXIT.matcher(line);
                 if (match.matches())
                 {
-                    String addrStr = match.group("address");
-                    int base = 10;
-                    if (addrStr.length() > 2 && addrStr.matches("^0[xX].+$"))
-                    {
-                        base = 16;
-                        addrStr = addrStr.substring(2);
-                    }
-                    long addr = Long.parseLong(addrStr, base);
-                    exits.add(addr);
+                    exits.add(strToLong(match.group("address")));
                     continue;
                 }
 
                 match = CMD_BRANCH.matcher(line);
                 if (match.matches())
                 {
-                    String srcStr = match.group("src");
-                    int base = 10;
-                    if (srcStr.length() > 2 && srcStr.matches("^0[xX].+$"))
-                    {
-                        base = 16;
-                        srcStr = srcStr.substring(2);
-                    }
-                    long src = Long.parseLong(srcStr, base);
-
-                    String destStr = match.group("dest");
-                    base = 10;
-                    if (destStr.length() > 2 && srcStr.matches("^0[xX].$"))
-                    {
-                        base = 16;
-                        destStr = destStr.substring(2);
-                    }
-                    long dest = Long.parseLong(destStr, base);
-
+                    long src = strToLong(match.group("src"));
+                    long dest = strToLong(match.group("dest"));
                     branchTargets.put(src, new BranchTarget(dest, null));
                     continue;
                 }
@@ -134,6 +146,14 @@ public class CFGConfiguration
             System.out.printf("    0x%08x -> (%s)\n",
                               entry.getKey(),
                               entry.getValue().toString());
+        }
+
+        System.out.println("Functions:");
+        for (Map.Entry<String, Long> entry : funcs.entrySet())
+        {
+            System.out.printf("    %s: %d\n",
+                              entry.getKey(),
+                              entry.getValue());
         }
     }
 }

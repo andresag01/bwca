@@ -46,7 +46,7 @@ public class ISAFunction
         + "/* Loop constraints */\n"
         + "%s";
 
-    private long address;
+    private Long address;
     private long size;
     private String name;
     private ISABlock entry;
@@ -62,6 +62,17 @@ public class ISAFunction
     {
         // Clear the bottom bit of the address because this is thumb
         this.address = address & ~0x1;
+        this.size = size;
+        this.name = name;
+        this.entry = null;
+        this.nextBlockId = 0;
+        this.infoMsgs = new LinkedList<String>();
+        this.config = config;
+    }
+
+    public ISAFunction(long size, String name, CFGConfiguration config)
+    {
+        this.address = null;
         this.size = size;
         this.name = name;
         this.entry = null;
@@ -104,17 +115,20 @@ public class ISAFunction
                 // Not the correct function
                 continue;
             }
+
+            if (this.address == null)
+            {
+                this.address = address;
+            }
             else if (address != this.address)
             {
                 // Something went wrong
-                String err =
-                    String.format("Function at 0x%08X does not "
-                                      + "match address at symbol table "
-                                      + "0x%08X for function %s",
+                System.out.printf("Function at 0x%08X does not match address "
+                                      + "at symbol table 0x%08X for function "
+                                      + "%s\n",
                                   address,
                                   this.address,
                                   name);
-                System.out.println(err);
                 System.exit(1);
             }
 

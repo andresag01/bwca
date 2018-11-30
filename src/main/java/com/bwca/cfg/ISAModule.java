@@ -34,6 +34,7 @@ public class ISAModule
 
     public void printMissingInfoMessages()
     {
+        System.out.println("Parsed " + funcMap.size() + " functions");
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
         {
             System.out.printf("Function %s\n", entry.getKey());
@@ -45,10 +46,29 @@ public class ISAModule
     }
 
     public int parseFunctions(ArrayList<String> readelf,
-                               ArrayList<String> objdump)
+                              ArrayList<String> objdump)
     {
-        boolean failed = false;
+        int ret = 0;
 
+        // Add the functions in the config file
+        for (Map.Entry<String, Long> entry : config.getFunctions().entrySet())
+        {
+            String name = entry.getKey();
+            long size = entry.getValue();
+
+            ISAFunction func = new ISAFunction(size, name, config);
+            if (func.parseInstructions(objdump) != 0)
+            {
+                ret = -1;
+            }
+            if (funcMap.put(name, func) != null)
+            {
+                System.out.printf("Function %s in config found twice\n", name);
+                System.exit(1);
+            }
+        }
+
+        // Add the functions in the symbol table (readelf output)
         for (String line : readelf)
         {
             Matcher match = SYM_TABLE_FUNC.matcher(line);
@@ -71,13 +91,16 @@ public class ISAModule
                                     config);
             if (func.parseInstructions(objdump) != 0)
             {
-                failed = true;
+                ret = -1;
             }
-
-            addFunction(name, func);
+            if (funcMap.put(name, func) != null)
+            {
+                System.out.printf("Function %s in config found twice\n", name);
+                System.exit(1);
+            }
         }
 
-        return failed ? -1 : 0;
+        return ret;
     }
 
     public void analyzeCFG()
@@ -86,11 +109,6 @@ public class ISAModule
         {
             entry.getValue().analyzeCFG();
         }
-    }
-
-    public void addFunction(String name, ISAFunction func)
-    {
-        funcMap.put(name, func);
     }
 
     public ISAFunction getFunction(String key)
