@@ -42,6 +42,7 @@ public class ISALine
         Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip),\\s+(?<src>.+)$");
     static final Pattern BRANCH_TARGET_ADDR =
         Pattern.compile("^(?<destAddr>[0-9a-f]+)\\s+<(?<funcName>[^>]+)>$");
+    static final Pattern BRANCH_FUNC_NAME = Pattern.compile("^[a-zA-Z_]\\w*$");
     static final Pattern REGLIST_BASE =
         Pattern.compile("^(?<baseReg>r[0-7])!?,\\s+(?<regList>.*)$");
 
@@ -118,12 +119,32 @@ public class ISALine
         }
 
         long address = Long.parseLong(match.group("destAddr"), 16);
-        targetFunction = match.group("funcName");
-        targetFunctionAddress = address;
+        String funcName = match.group("funcName");
+
+        match = BRANCH_FUNC_NAME.matcher(funcName);
+        if (match.matches())
+        {
+            targetFunction = funcName;
+            targetFunctionAddress = address;
+        }
 
         if (inst == Instruction.B)
         {
-            branchTargets.add(new BranchTarget(address, true));
+            // Sometimes branches (without link) are used as function calls.
+            // In this case, we cannot set the BranchTarget because the edges
+            // will remain as NULL and break the analysis later on. Instead, we
+            // record this as a branch function call and deal with it later as
+            // if it were a bl
+            if (type == InstructionType.COND_BRANCH && targetFunction != null)
+            {
+                System.out.println("Unsupported conditional branch as function"
+                                   + "call in instruction " + this);
+                System.exit(1);
+            }
+            if (type != InstructionType.BRANCH || targetFunction == null)
+            {
+                branchTargets.add(new BranchTarget(address, true));
+            }
             if (type == InstructionType.COND_BRANCH)
             {
                 branchTargets.add(

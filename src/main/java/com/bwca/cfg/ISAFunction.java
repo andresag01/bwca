@@ -604,7 +604,8 @@ public class ISAFunction
             functionAddress = inst.getTargetFunctionAddress();
 
             if (functionName == null ||
-                inst.getType() != InstructionType.BRANCH_LINK)
+                (inst.getType() != InstructionType.BRANCH_LINK &&
+                 inst.getType() != InstructionType.BRANCH))
             {
                 // This instruction does not call a function
                 continue;

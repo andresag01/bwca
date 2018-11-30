@@ -241,7 +241,11 @@ public class ISABlock
         {
             if (edge.getBlock() != null)
             {
-                String edgeCost = model.getEdgeSummary(edge);
+                String edgeCost = null;
+                if (model != null)
+                {
+                    edgeCost = model.getEdgeSummary(edge);
+                }
                 edgeCost = (edgeCost == null) ? "" : "[" + edgeCost + "]";
                 String edgeStr = String.format("block%d -> block%d "
                                                    + "[label=\"e%d %s\"]",
