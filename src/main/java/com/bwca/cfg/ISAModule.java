@@ -169,8 +169,15 @@ public class ISAModule
 
             createOutputDirectory(outDir);
 
-            func.writeDotFile(
-                outDir + File.separator + model.getName() + ".dot", model);
+            if (model != null)
+            {
+                func.writeDotFile(
+                    outDir + File.separator + model.getName() + ".dot", model);
+            }
+            else
+            {
+                func.writeDotFile( outDir + ".dot", null);
+            }
         }
     }
 }

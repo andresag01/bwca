@@ -64,6 +64,28 @@ public class ISALine
         parseInstruction(config);
     }
 
+    public ISALine(long address,
+                   String opcode,
+                   String body,
+                   boolean exit,
+                   String targetFunction,
+                   long targetFunctionAddress,
+                   Instruction inst,
+                   InstructionType type)
+    {
+        this.address = address;
+        this.opcode = opcode.trim();
+        this.body = body.trim();
+        this.branchTargets = new ArrayList<BranchTarget>();
+        this.regList = new ArrayList<Register>();
+        this.infoMsgs = new LinkedList<String>();
+        this.targetFunction = targetFunction;
+        this.targetFunctionAddress = targetFunctionAddress;
+        this.exit = exit;
+        this.inst = inst;
+        this.type = type;
+    }
+
     public String toString()
     {
         return String.format("0x%08X: %s %s", address, opcode, body);
@@ -130,26 +152,33 @@ public class ISALine
 
         if (inst == Instruction.B)
         {
-            // Sometimes branches (without link) are used as function calls.
-            // In this case, we cannot set the BranchTarget because the edges
-            // will remain as NULL and break the analysis later on. Instead, we
-            // record this as a branch function call and deal with it later as
-            // if it were a bl
-            if (type == InstructionType.COND_BRANCH && targetFunction != null)
-            {
-                System.out.println("Unsupported conditional branch as function"
-                                   + "call in instruction " + this);
-                System.exit(1);
-            }
-            if (type != InstructionType.BRANCH || targetFunction == null)
-            {
-                branchTargets.add(new BranchTarget(address, true));
-            }
+            branchTargets.add(new BranchTarget(address, true));
             if (type == InstructionType.COND_BRANCH)
             {
                 branchTargets.add(
                     new BranchTarget(this.address + 2, false));
             }
+
+            //// Sometimes branches (without link) are used as function calls.
+            //// In this case, we cannot set the BranchTarget because the edges
+            //// will remain as NULL and break the analysis later on. Instead, we
+            //// record this as a branch function call and deal with it later as
+            //// if it were a bl
+            //if (type == InstructionType.COND_BRANCH && targetFunction != null)
+            //{
+            //    System.out.println("Unsupported conditional branch as function"
+            //                       + "call in instruction " + this);
+            //    System.exit(1);
+            //}
+            //if (type != InstructionType.BRANCH || targetFunction == null)
+            //{
+            //    branchTargets.add(new BranchTarget(address, true));
+            //}
+            //if (type == InstructionType.COND_BRANCH)
+            //{
+            //    branchTargets.add(
+            //        new BranchTarget(this.address + 2, false));
+            //}
         }
     }
 

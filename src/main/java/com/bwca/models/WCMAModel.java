@@ -295,6 +295,10 @@ public class WCMAModel extends Model
                 cost.addFetch(costOfFetch(1));
                 break;
 
+            case FUNC_CALL:
+                // This is a dummy instruction with no cost
+                break;
+
             default:
                 System.out.println("WCMA: Unrecognized instruction " +
                                    inst.getInstruction().name());

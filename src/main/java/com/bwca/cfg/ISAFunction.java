@@ -175,6 +175,8 @@ public class ISAFunction
 
         // Extract target addresses
         Set<Long> branchTargetAddrs = new HashSet<Long>();
+        Map<Long, String> outOfFuncBranchTargetAddrs =
+            new HashMap<Long, String>();
         for (ISALine inst : insts)
         {
             if (inst.getType() == InstructionType.BRANCH ||
@@ -182,12 +184,24 @@ public class ISAFunction
             {
                 for (BranchTarget target : inst.getBranchTargets())
                 {
-                    // Add it do the map if the target is in the function
                     Long destAddress = target.getAddress();
                     if (destAddress != null && destAddress >= this.address &&
                         destAddress < this.address + this.size)
                     {
+                        // Add it do the map if the target is in the function
                         branchTargetAddrs.add(destAddress);
+                    }
+                    else
+                    {
+                        if (destAddress != inst.getTargetFunctionAddress() ||
+                            inst.getTargetFunction() == null)
+                        {
+                            System.out.println("Unconditional function call "
+                                               + "does not have information");
+                            System.exit(1);
+                        }
+                        outOfFuncBranchTargetAddrs.put(destAddress,
+                                                    inst.getTargetFunction());
                     }
                 }
             }
@@ -241,6 +255,29 @@ public class ISAFunction
             System.out.println("The function has no blocks!");
             System.exit(1);
         }
+
+        // Create dummy blocks for the target addresses that are outside the
+        // function
+        for (Map.Entry<Long, String> entry :
+             outOfFuncBranchTargetAddrs.entrySet())
+        {
+            ISABlock dummyBlock = new ISABlock(entry.getKey(), nextBlockId++);
+            blocks.add(dummyBlock);
+            blocksMap.put(entry.getKey(), dummyBlock);
+            dummyBlock.setExit(true);
+
+            // Add a fake instruction that represents a function call
+            dummyBlock.addLine(new ISALine(address,
+                                           "func_call",
+                                           entry.getValue(),
+                                           true,
+                                           entry.getValue(),
+                                           entry.getKey(),
+                                           Instruction.FUNC_CALL,
+                                           InstructionType.OTHER));
+            //System.out.println(dummyBlock.toString());
+        }
+
         entry = blocks.get(0);
 
         // Create the edges of the CFG
@@ -295,6 +332,13 @@ public class ISAFunction
                             // success for the simulator
                             break;
                         }
+                        else if (inst.getInstruction() ==
+                                 Instruction.FUNC_CALL)
+                        {
+                            // This is a special dummy block for unconditional
+                            // branches to functions
+                            break;
+                        }
 
                         // This situation is rather dodgy because functions
                         // normally return on a proper branch instruction (to
@@ -323,10 +367,23 @@ public class ISAFunction
                     for (BranchTarget target : inst.getBranchTargets())
                     {
                         Long address = target.getAddress();
-                        if (address != null)
-                        {
-                            target.setBlock(blocksMap.get(address));
-                        }
+                        target.setBlock(blocksMap.get(address));
+                        //ISABlock targetBlock = blocksMap.get(address);
+                        //target.setBlock(targetBlock);
+                        //if (targetBlock.getLastLine() == null)
+                        //{
+                        //    // This is a dummy block for the function call cost
+                        //    // so we expect the current instruction to have
+                        //    // function call information
+                        //    if (inst.getTargetFunction() == null)
+                        //    {
+                        //        System.out.println("Instruction with edge to "
+                        //                           + "dummy block does not "
+                        //                           + "have function call "
+                        //                           + "information");
+                        //        System.exit(1);
+                        //    }
+                        //}
                     }
                     break;
 
@@ -341,13 +398,20 @@ public class ISAFunction
             }
         }
 
-        // Check that there is at least one exit block
+        // Check that there is at least one exit block and that no exit block
+        // has outgoing edges
         boolean hasExit = false;
         for (int i = 0; i < blocks.size(); i++)
         {
             if (blocks.get(i).isExit())
             {
                 hasExit = true;
+            }
+            if (blocks.get(i).isExit() && blocks.get(i).getEdges().size() != 0)
+            {
+                System.out.println("Exit block has outgoing edges in function"
+                                   + " " + name);
+                System.exit(1);
             }
         }
         if (!hasExit)
@@ -603,12 +667,24 @@ public class ISAFunction
             functionName = inst.getTargetFunction();
             functionAddress = inst.getTargetFunctionAddress();
 
-            if (functionName == null ||
-                (inst.getType() != InstructionType.BRANCH_LINK &&
-                 inst.getType() != InstructionType.BRANCH))
+            if (functionName == null)
             {
-                // This instruction does not call a function
                 continue;
+            }
+            else if (inst.getType() == InstructionType.BRANCH ||
+                     inst.getType() == InstructionType.COND_BRANCH)
+            {
+                // This is handled via the dummy block, so skip it
+                continue;
+            }
+
+            if (inst.getType() != InstructionType.BRANCH_LINK &&
+                inst.getType() != InstructionType.OTHER &&
+                inst.getInstruction() == Instruction.FUNC_CALL)
+            {
+                System.out.println("Instruction has function call but is of "
+                                   + "unexpected type");
+                System.exit(1);
             }
 
             if (callInfo.containsKey(functionName))

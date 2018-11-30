@@ -51,4 +51,5 @@ public enum Instruction {
     BKPT,
     SVC,
     CPS,
+    FUNC_CALL,
 }

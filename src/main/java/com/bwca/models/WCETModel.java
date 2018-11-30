@@ -198,6 +198,10 @@ public class WCETModel extends Model
                 cost.addAlu(1);
                 break;
 
+            case FUNC_CALL:
+                // This is a dummy block with no cost
+                break;
+
             default:
                 System.out.println("WCET: Unrecognized instruction");
                 System.exit(1);
