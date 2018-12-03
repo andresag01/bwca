@@ -296,18 +296,6 @@ public class ISAFunction
             {
                 case OTHER:
                 case BRANCH_LINK:
-                    //if (i + 1 >= blocks.size())
-                    //{
-                    //    // We are at the end of the function. Set this as an
-                    //    // exit, but it is weird to not have a function
-                    //    // terminate with a return instruction.
-                    //    //
-                    //    // NOTE: Sometimes the last instruction can be a call
-                    //    // to a noreturn function, in which case there could be
-                    //    // a blx or bl instruction at the end.
-                    //    blocks.get(i).setExit(true);
-                    //    break;
-                    //}
                     if (i + 1 >= blocks.size())
                     {
                         // There are no subsequent blocks, this is probably an
@@ -358,32 +346,10 @@ public class ISAFunction
 
                 case BRANCH:
                 case COND_BRANCH:
-                    //if (inst.getBranchTargets().size() == 0)
-                    //{
-                    //    // This is an exit block
-                    //    //blocks.get(i).setExit(true);
-                    //    break;
-                    //}
                     for (BranchTarget target : inst.getBranchTargets())
                     {
                         Long address = target.getAddress();
                         target.setBlock(blocksMap.get(address));
-                        //ISABlock targetBlock = blocksMap.get(address);
-                        //target.setBlock(targetBlock);
-                        //if (targetBlock.getLastLine() == null)
-                        //{
-                        //    // This is a dummy block for the function call cost
-                        //    // so we expect the current instruction to have
-                        //    // function call information
-                        //    if (inst.getTargetFunction() == null)
-                        //    {
-                        //        System.out.println("Instruction with edge to "
-                        //                           + "dummy block does not "
-                        //                           + "have function call "
-                        //                           + "information");
-                        //        System.exit(1);
-                        //    }
-                        //}
                     }
                     break;
 
