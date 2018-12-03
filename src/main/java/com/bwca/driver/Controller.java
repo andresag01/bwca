@@ -1,7 +1,7 @@
 package com.bwca.driver;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -201,48 +201,28 @@ public class Controller
         }
     }
 
-    private ArrayList<String> runShell(String[] cmd)
+    private ArrayList<String> runShell(String[] cmd, File outputFile)
         throws InterruptedException, IOException
     {
-        Runtime rt = Runtime.getRuntime();
-        Process proc = rt.exec(cmd);
+        ProcessBuilder procBuilder = new ProcessBuilder(cmd);
+        procBuilder.redirectErrorStream(true);
+        procBuilder.redirectOutput(outputFile);
+        Process p = procBuilder.start();
+        int exitCode = p.waitFor();
 
-        InputStream stdoutStream = proc.getInputStream();
-        InputStreamReader stdoutReader = new InputStreamReader(stdoutStream);
-        BufferedReader stdout = new BufferedReader(stdoutReader);
-
-        InputStream stderrStream = proc.getErrorStream();
-        InputStreamReader stderrReader = new InputStreamReader(stderrStream);
-        BufferedReader stderr = new BufferedReader(stderrReader);
-
-        // Wait for the subprocess to terminate
-        int retStatus = proc.waitFor();
-
-        // Read the errors
-        String line = null;
-        boolean failed = false;
-        while ((line = stderr.readLine()) != null)
+        if (exitCode != 0)
         {
-            System.out.println(line);
-            failed = true;
-        }
-
-        if (failed)
-        {
-            System.out.println("Subprocess terminated with errors");
-            System.exit(1);
-        }
-
-        if (retStatus != 0)
-        {
-            System.out.println("Subprocess terminated with error " +
-                               retStatus);
+            System.out.println("Subprocess terminated with error " + exitCode);
+            System.out.println("Errors at " + outputFile.getAbsolutePath());
             System.exit(1);
         }
 
         // Read the output
+        FileReader freader = new FileReader(outputFile);
+        BufferedReader breader = new BufferedReader(freader);
         ArrayList<String> output = new ArrayList<String>();
-        while ((line = stdout.readLine()) != null)
+        String line;
+        while ((line = breader.readLine()) != null)
         {
             output.add(line);
         }
@@ -250,22 +230,50 @@ public class Controller
         return output;
     }
 
+    private void createOutputDirectory(String directory)
+    {
+        File dir = new File(directory);
+
+        if (dir.isDirectory())
+        {
+            // The directory already exists, nothing to do
+            return;
+        }
+
+        // Create the directory (and any parent directories that do not exist)
+        if (!dir.mkdirs())
+        {
+            System.out.println("Could not create output directory " +
+                               outputDir);
+            System.exit(1);
+        }
+    }
+
     private void analyze()
     {
         ArrayList<String> objdump = null;
         ArrayList<String> readelf = null;
 
+        // Create output directory (if it does not already exist)
+        createOutputDirectory(outputDir);
+
+        // Run objdump and readelf, store output in a file and then read it
+        // into memory
         try
         {
             System.out.println("Running objdump");
+            File outputObjdumpFile =
+                new File(outputDir + File.separator + "objdump.log");
             String[] cmd = Arrays.copyOf(OBJDUMP_CMD, OBJDUMP_CMD.length + 1);
             cmd[cmd.length - 1] = binFile;
-            objdump = runShell(cmd);
+            objdump = runShell(cmd, outputObjdumpFile);
 
             System.out.println("Running readelf");
+            File outputReadelfFile =
+                new File(outputDir + File.separator + "readelf.log");
             cmd = Arrays.copyOf(READELF_CMD, READELF_CMD.length + 1);
             cmd[cmd.length - 1] = binFile;
-            readelf = runShell(cmd);
+            readelf = runShell(cmd, outputReadelfFile);
         }
         catch (IOException ioe)
         {
