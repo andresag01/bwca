@@ -445,7 +445,7 @@ public class ISALine
                     {
                         infoMsgs.add(String.format(infoMsgFmtBrandDst,
                                                    address,
-                                                   "bx"));
+                                                   "add"));
                     }
                 }
                 break;
