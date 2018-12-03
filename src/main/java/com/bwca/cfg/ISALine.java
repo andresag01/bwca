@@ -347,14 +347,8 @@ public class ISALine
                     if (reg == Register.PC)
                     {
                         type = InstructionType.BRANCH;
-                        if (!exit)
-                        {
-                            // This instruction is a "return from function"
-                            // branch
-                            infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                       address,
-                                                       "pop"));
-                        }
+                        // Assume this is a "return from function" instruction
+                        exit = true;
                     }
                 }
                 break;
@@ -435,14 +429,8 @@ public class ISALine
             case "bx":
                 type = InstructionType.BRANCH;
                 inst = Instruction.BX;
-                if (!exit)
-                {
-                    // This instruction is a "return from function"
-                    // branch
-                    infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                               address,
-                                               "bx"));
-                }
+                // Assume this is a "return from function" instruction
+                exit = true;
                 break;
 
             case "add":
@@ -649,11 +637,15 @@ public class ISALine
             case "bkpt":
                 type = InstructionType.OTHER;
                 inst = Instruction.BKPT;
+                // Assume this is a "halt" instruction for the simulator
+                exit = true;
                 break;
 
             case "svc":
                 type = InstructionType.OTHER;
                 inst = Instruction.SVC;
+                // Assume this is a "halt" instruction for the simulator
+                exit = true;
                 break;
 
             case "cps":
