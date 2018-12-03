@@ -275,7 +275,6 @@ public class ISAFunction
                                            entry.getKey(),
                                            Instruction.FUNC_CALL,
                                            InstructionType.OTHER));
-            //System.out.println(dummyBlock.toString());
         }
 
         entry = blocks.get(0);
@@ -372,22 +371,45 @@ public class ISAFunction
             }
         }
 
-        // Check that there is at least one exit block and that no exit block
-        // has outgoing edges
+        // Create a dummy block to consolidate all exit points into a single
+        // one. Otherwise lp_solve cannot deal with the problem
+        ISABlock dummyBlock = new ISABlock(0, nextBlockId++);
+        dummyBlock.setExit(true);
+        dummyBlock.addLine(new ISALine(0,
+                                       "func_exit",
+                                       "",
+                                       true,
+                                       null,
+                                       0,
+                                       Instruction.FUNC_EXIT,
+                                       InstructionType.OTHER));
+        dummyBlock.setEdges(dummyBlock.getLastLine().getBranchTargets());
+
         boolean hasExit = false;
         for (int i = 0; i < blocks.size(); i++)
         {
-            if (blocks.get(i).isExit())
+            if (!blocks.get(i).isExit())
             {
-                hasExit = true;
+                continue;
             }
-            if (blocks.get(i).isExit() && blocks.get(i).getEdges().size() != 0)
+
+            if (blocks.get(i).getEdges().size() != 0)
             {
-                System.out.println("Exit block has outgoing edges in function"
-                                   + " " + name);
+                System.out.println("Exit block has outgoing edges in "
+                                   + "function " + name);
                 System.exit(1);
             }
+
+            hasExit = true;
+
+            // Make the exit block point to the single exit point
+            blocks.get(i).addEdge(dummyBlock);
         }
+        blocks.add(dummyBlock);
+
+
+        // Check that there is at least one exit block and that no exit block
+        // has outgoing edges
         if (!hasExit)
         {
             infoMsgs.add("No exit block");
@@ -751,7 +773,8 @@ public class ISAFunction
                 outConstraints.append(blockPfix + block.getId() + " = ");
                 if (block.getEdges().size() == 0)
                 {
-                    if (!block.isExit())
+                    if (block.getLastLine().getInstruction() !=
+                        Instruction.FUNC_EXIT)
                     {
                         System.out.println("Block " + block.getId() + " has "
                                            + "no output edges and not an "

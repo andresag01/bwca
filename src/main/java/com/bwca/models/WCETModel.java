@@ -199,7 +199,8 @@ public class WCETModel extends Model
                 break;
 
             case FUNC_CALL:
-                // This is a dummy block with no cost
+            case FUNC_EXIT:
+                // These are dummy instructions with no cost
                 break;
 
             default:

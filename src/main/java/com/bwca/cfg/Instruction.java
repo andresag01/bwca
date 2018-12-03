@@ -52,4 +52,5 @@ public enum Instruction {
     SVC,
     CPS,
     FUNC_CALL,
+    FUNC_EXIT,
 }
