@@ -320,6 +320,14 @@ public class ISAFunction
                             // success for the simulator
                             break;
                         }
+                        else if (name.equals("abort") &&
+                                 inst.getOpcode().equals("svc"))
+                        {
+                            // This is the "special" abort() function that
+                            // terminates in a bkpt instruction and indicates
+                            // failure for the simulator
+                            break;
+                        }
                         else if (inst.getInstruction() ==
                                  Instruction.FUNC_CALL)
                         {
