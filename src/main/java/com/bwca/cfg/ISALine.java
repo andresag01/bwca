@@ -27,6 +27,8 @@ public class ISALine
 
     private boolean exit;
 
+    private CFGConfiguration config;
+
     // Operands
     Register destReg;
     ArrayList<Register> regList;
@@ -60,8 +62,9 @@ public class ISALine
         this.targetFunction = null;
         this.targetFunctionAddress = null;
         this.exit = false;
+        this.config = config;
 
-        parseInstruction(config);
+        parseInstruction();
     }
 
     public ISALine(long address,
@@ -84,6 +87,31 @@ public class ISALine
         this.exit = exit;
         this.inst = inst;
         this.type = type;
+    }
+
+    public long getAllocationSize()
+    {
+        if (inst != Instruction.WFI && type != InstructionType.BRANCH_LINK)
+        {
+            System.out.println("Asking allocation size of non wfi or malloc" +
+                               " call");
+            System.exit(1);
+        }
+
+        if (config.getAllocationSizes().containsKey(address))
+        {
+            return config.getAllocationSizes().get(address);
+        }
+        else
+        {
+            /* No information about the allocation */
+            System.out.printf("No information about allocation at 0x%08x " +
+                              "(%s %s)\n",
+                              address,
+                              opcode,
+                              body);
+            return 1;
+        }
     }
 
     public String toString()
@@ -224,7 +252,7 @@ public class ISALine
         return opcode;
     }
 
-    private void parseInstruction(CFGConfiguration config)
+    private void parseInstruction()
     {
         String infoMsgFmtBrandDst = "0x%08x %s (unknown branch destination)";
         pred = Predicate.AL;

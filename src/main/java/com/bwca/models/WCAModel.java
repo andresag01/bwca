@@ -11,13 +11,13 @@ import com.bwca.cfg.Instruction;
 
 public class WCAModel extends Model
 {
-    private Map<ISABlock, Integer> wfi;
-    private Map<ISABlock, Integer> malloc;
+    private Map<ISABlock, Long> wfi;
+    private Map<ISABlock, Long> malloc;
 
     public WCAModel()
     {
-        wfi = new HashMap<ISABlock, Integer>();
-        malloc = new HashMap<ISABlock, Integer>();
+        wfi = new HashMap<ISABlock, Long>();
+        malloc = new HashMap<ISABlock, Long>();
     }
 
     public String getName()
@@ -39,18 +39,7 @@ public class WCAModel extends Model
     {
         StringBuilder builder = new StringBuilder();
 
-        for (int i = 0; i < wfi.get(block); i++)
-        {
-            builder.append("BOUND_WFI" + i);
-            builder.append((i + 1 >= wfi.get(block)) ? "" : " +\n    ");
-        }
-
-        builder.append((builder.length() == 0) ? "0" : "");
-
-        for (int i = 0; i < malloc.get(block); i++)
-        {
-            builder.append(" +\n    " + "BOUND_MALLOC" + i);
-        }
+        builder.append(wfi.get(block) + " + " + malloc.get(block));
 
         return builder.toString();
     }
@@ -67,35 +56,39 @@ public class WCAModel extends Model
 
     public void addLineCost(ISABlock block, ISALine inst)
     {
-        Integer wfiCost = wfi.get(block);
-        Integer mallocCost = malloc.get(block);;
+        Long wfiCost = wfi.get(block);
+        Long mallocCost = malloc.get(block);;
 
         if (wfiCost == null)
         {
-            wfiCost = 0;
-            mallocCost = 0;
+            wfiCost = 0L;
+            mallocCost = 0L;
         }
 
         if (inst.getInstruction() == Instruction.WFI)
         {
             // GETM instruction
-            wfiCost += 1;
+            wfiCost += inst.getAllocationSize();
         }
-
-        String targetFunc = inst.getTargetFunction();
-        if (targetFunc != null && (targetFunc.contains("malloc") ||
-            targetFunc.contains("calloc") || targetFunc.contains("realloc")))
+        else
         {
-            switch (inst.getType())
+            String targetFunc = inst.getTargetFunction();
+            if (targetFunc != null &&
+                (targetFunc.contains("malloc") ||
+                 targetFunc.contains("calloc") ||
+                 targetFunc.contains("realloc")))
             {
-                case BRANCH_LINK:
-                    mallocCost += 1;
-                    break;
+                switch (inst.getType())
+                {
+                    case BRANCH_LINK:
+                        mallocCost += inst.getAllocationSize();
+                        break;
 
-                default:
-                    System.out.println("Branching to malloc, realloc or "
-                                       + "calloc without link");
-                    System.exit(1);
+                    default:
+                        System.out.println("Branching to malloc, realloc or "
+                                           + "calloc without link");
+                        System.exit(1);
+                }
             }
         }
 

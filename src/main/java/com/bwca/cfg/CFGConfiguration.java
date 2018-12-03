@@ -24,16 +24,29 @@ public class CFGConfiguration
     static final Pattern CMD_FUNC = Pattern.compile("^function\\s+"
                                                     + "(?<name>[a-zA-Z_]\\w*)"
                                                     + "\\s+(?<size>\\d+)$");
+    static final Pattern CMD_LOOP_BOUND = Pattern.compile("^loopbound\\s+"
+                        + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
+                        + "\\s+min"
+                        + "\\s+(?<min>\\d+)"
+                        + "\\s+max"
+                        + "\\s+(?<max>\\d+)$");
+    static final Pattern CMD_ALLOC_BOUND = Pattern.compile("^allocbound\\s+"
+                        + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
+                        + "\\s+(?<size>\\d+)$");
 
     private Map<Long, BranchTarget> branchTargets;
     private Set<Long> exits;
     private Map<String, Long> funcs;
+    private Map<Long, LoopBound> loops;
+    private Map<Long, Long> allocs;
 
     public CFGConfiguration()
     {
         branchTargets = new HashMap<Long, BranchTarget>();
         exits = new HashSet<Long>();
         funcs = new HashMap<String, Long>();
+        loops = new HashMap<Long, LoopBound>();
+        allocs = new HashMap<Long, Long>();
     }
 
     public boolean isExit(long address)
@@ -44,6 +57,16 @@ public class CFGConfiguration
     public Map<String, Long> getFunctions()
     {
         return funcs;
+    }
+
+    public Map<Long, LoopBound> getLoopBounds()
+    {
+        return loops;
+    }
+
+    public Map<Long, Long> getAllocationSizes()
+    {
+        return allocs;
     }
 
     private long strToLong(String str)
@@ -83,6 +106,25 @@ public class CFGConfiguration
                 if (match.matches())
                 {
                     /* Skip over comments */
+                    continue;
+                }
+
+                match = CMD_LOOP_BOUND.matcher(line);
+                if (match.matches())
+                {
+                    long address = strToLong(match.group("address"));
+                    long lbound = strToLong(match.group("min"));
+                    long ubound = strToLong(match.group("max"));
+                    loops.put(address, new LoopBound(lbound, ubound));
+                    continue;
+                }
+
+                match = CMD_ALLOC_BOUND.matcher(line);
+                if (match.matches())
+                {
+                    long address = strToLong(match.group("address"));
+                    long size = strToLong(match.group("size"));
+                    allocs.put(address, size);
                     continue;
                 }
 
@@ -152,6 +194,14 @@ public class CFGConfiguration
         for (Map.Entry<String, Long> entry : funcs.entrySet())
         {
             System.out.printf("    %s: %d\n",
+                              entry.getKey(),
+                              entry.getValue());
+        }
+
+        System.out.println("Allocation sizes:");
+        for (Map.Entry<Long, Long> entry : allocs.entrySet())
+        {
+            System.out.printf("    0x%08x: %d\n",
                               entry.getKey(),
                               entry.getValue());
         }

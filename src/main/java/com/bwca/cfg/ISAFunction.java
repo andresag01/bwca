@@ -818,17 +818,43 @@ public class ISAFunction
                         if (!edge.getCondition())
                         {
                             // This is the exit edge of the loop
+                            ISALine inst = block.getLastLine();
+                            String lbound = "BOUND";
+                            String ubound = "BOUND";
+
+                            // Check if we have information about this bound in
+                            // the config
+                            Map<Long, LoopBound> loops =
+                                config.getLoopBounds();
+
+                            if (loops.containsKey(inst.getAddress()))
+                            {
+                                LoopBound bound = loops.get(inst.getAddress());
+                                lbound = Long.toString(bound.getLowerBound());
+                                ubound = Long.toString(bound.getUpperBound());
+                            }
+                            else
+                            {
+                                System.out.printf("No information about loop "
+                                                  + "at 0x%08x\n",
+                                                  inst.getAddress());
+                            }
+
                             String constraint =
-                                String.format("%s%d >= BOUND %s%d;\n",
+                                String.format("/* Branch at 0x%08x */\n" +
+                                              "%s%d >= %s %s%d;\n",
+                                              inst.getAddress(),
                                               blockPfix,
                                               block.getId(),
+                                              lbound,
                                               edgePfix,
                                               edge.getId());
                             loopConstraints.append(constraint);
 
-                            constraint = String.format("%s%d <= BOUND %s%d;\n",
+                            constraint = String.format("%s%d <= %s %s%d;\n",
                                                        blockPfix,
                                                        block.getId(),
+                                                       ubound,
                                                        edgePfix,
                                                        edge.getId());
                             loopConstraints.append(constraint);
