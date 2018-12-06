@@ -242,17 +242,24 @@ public class ISABlock
             if (edge.getBlock() != null)
             {
                 String edgeCost = null;
+                String edgeColor = "black";
                 if (model != null)
                 {
                     edgeCost = model.getEdgeSummary(edge);
                 }
                 edgeCost = (edgeCost == null) ? "" : "[" + edgeCost + "]";
+                if (edge.getLoopExit())
+                {
+                    edgeColor = "blue";
+                }
                 String edgeStr = String.format("block%d -> block%d "
-                                                   + "[label=\"e%d %s\"]",
+                                                   + "[label=\"e%d %s\","
+                                                   + "color=%s]",
                                                this.id,
                                                edge.getBlock().getId(),
                                                edge.getId(),
-                                               edgeCost);
+                                               edgeCost,
+                                               edgeColor);
                 output.add(edgeStr);
             }
         }

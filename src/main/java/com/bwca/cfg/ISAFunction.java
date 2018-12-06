@@ -544,6 +544,11 @@ public class ISAFunction
                         System.exit(1);
                     }
                     block.setLoopBranch(true);
+                    // Figure out which of the edges of the branch block
+                    // takes control out of the loop. We will need this
+                    // later for writing the ILP and its not easy to work
+                    // out based on other information
+                    tagLoopExitBranch(block, target);
                 }
                 tagLoopHeader(block, nh);
             }
@@ -568,6 +573,11 @@ public class ISAFunction
                         InstructionType.COND_BRANCH)
                     {
                         block.setLoopBranch(true);
+                        // Figure out which of the edges of the branch block
+                        // takes control out of the loop. We will need this
+                        // later for writing the ILP and its not easy to work
+                        // out based on other information
+                        tagLoopExitBranch(block, target);
                     }
                     else
                     {
@@ -599,6 +609,41 @@ public class ISAFunction
         }
         block.setDFSPosition(0);
         return block.getInnerLoopHeader();
+    }
+
+    private void tagLoopExitBranch(ISABlock block, BranchTarget notExit)
+    {
+        boolean found = false;
+
+        // Make sure the loop does not have more than one exit
+        if (block.getEdges().size() > 2)
+        {
+            System.out.println("Loop has more than 2 output "
+                               + "edges");
+            System.exit(1);
+        }
+
+        for (BranchTarget candidate : block.getEdges())
+        {
+            if (candidate == notExit)
+            {
+                continue;
+            }
+            else if (found)
+            {
+                System.out.println("Loop exit found more than once");
+                System.exit(1);
+            }
+
+            found = true;
+            candidate.setLoopExit(true);
+        }
+
+        if (!found)
+        {
+            System.out.println("Loop exit not found");
+            System.exit(1);
+        }
     }
 
     private void tagLoopHeader(ISABlock block, ISABlock header)
@@ -844,9 +889,19 @@ public class ISAFunction
             {
                 if (block.isLoopBranch())
                 {
+                    boolean wroteBound = false;
+
+                    // Make sure the loop does not have more than one exit
+                    if (block.getEdges().size() > 2)
+                    {
+                        System.out.println("Loop has more than 2 output "
+                                           + "edges");
+                        System.exit(1);
+                    }
+
                     for (BranchTarget edge : block.getEdges())
                     {
-                        if (!edge.getCondition())
+                        if (edge.getLoopExit())
                         {
                             // This is the exit edge of the loop
                             ISALine inst = block.getLastLine();
@@ -889,7 +944,27 @@ public class ISAFunction
                                                        edgePfix,
                                                        edge.getId());
                             loopConstraints.append(constraint);
+
+                            if (wroteBound)
+                            {
+                                // Should never happen!
+                                System.out.println("Somehow loop at block"
+                                                   + block.getId() + " has two "
+                                                   + "exits at function "
+                                                   + name);
+                                System.exit(1);
+                            }
+                            wroteBound = true;
                         }
+                    }
+
+                    if (!wroteBound)
+                    {
+                        // Should never happen!
+                        System.out.println("Somehow loop at block "
+                                           + block.getId() + " has no exits "
+                                           + "in function " + name + "!");
+                        System.exit(1);
                     }
                 }
             }
