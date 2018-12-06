@@ -44,6 +44,10 @@ public class ISAFunction
         + "/* Input constraints */\n"
         + "%s\n"
         + "/* Loop constraints */\n"
+        + "%s\n"
+        + "/* Block variable declarations */\n"
+        + "%s\n"
+        + "/* Edge variable declarations */\n"
         + "%s";
 
     private Long address;
@@ -51,9 +55,11 @@ public class ISAFunction
     private String name;
     private ISABlock entry;
     private ArrayList<ISABlock> blocks;
-    private int nextBlockId;
     private LinkedList<String> infoMsgs;
     private CFGConfiguration config;
+
+    private int nextEdgeId;
+    private int nextBlockId;
 
     public ISAFunction(long address,
                        long size,
@@ -65,9 +71,10 @@ public class ISAFunction
         this.size = size;
         this.name = name;
         this.entry = null;
-        this.nextBlockId = 0;
         this.infoMsgs = new LinkedList<String>();
         this.config = config;
+        this.nextBlockId = 0;
+        this.nextEdgeId = 0;
     }
 
     public ISAFunction(long size, String name, CFGConfiguration config)
@@ -76,9 +83,10 @@ public class ISAFunction
         this.size = size;
         this.name = name;
         this.entry = null;
-        this.nextBlockId = 0;
         this.infoMsgs = new LinkedList<String>();
         this.config = config;
+        this.nextBlockId = 0;
+        this.nextEdgeId = 0;
     }
 
     public LinkedList<String> getMissingInfoMessages()
@@ -468,8 +476,6 @@ public class ISAFunction
 
     private void numberEdges()
     {
-        int nextEdgeId = 0;
-
         for (ISABlock block : blocks)
         {
             if (block.getEdges().size() == 0)
@@ -710,6 +716,8 @@ public class ISAFunction
             StringBuilder loopConstraints = new StringBuilder();
             StringBuilder blockWeights = new StringBuilder();
             StringBuilder functionWeights = new StringBuilder();
+            StringBuilder blockDecls = new StringBuilder();
+            StringBuilder edgeDecls = new StringBuilder();
             Map<String, FunctionCallInformation> callInfo;
             Set<String> functionsCalled = new HashSet<String>();
 
@@ -892,6 +900,21 @@ public class ISAFunction
                 functionWeights.append(function + " = WEIGHT;\n");
             }
 
+            // Block and edge declarations
+            for (ISABlock block : blocks)
+            {
+                blockDecls.append(String.format("int %s%d;\n",
+                                                blockPfix,
+                                                block.getId()));
+
+                for (BranchTarget edge : block.getEdges())
+                {
+                    edgeDecls.append(String.format("int %s%d;\n",
+                                                   edgePfix,
+                                                   edge.getId()));
+                }
+            }
+
             // Write the data in ILP format
             String output = String.format(ILP_TOP_LEVEL,
                                           name,
@@ -900,7 +923,9 @@ public class ISAFunction
                                           functionWeights.toString(),
                                           outConstraints.toString(),
                                           inConstraints.toString(),
-                                          loopConstraints.toString());
+                                          loopConstraints.toString(),
+                                          blockDecls.toString(),
+                                          edgeDecls.toString());
             bwriter.write(output);
             bwriter.close();
         }
