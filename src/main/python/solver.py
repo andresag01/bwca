@@ -39,6 +39,8 @@ class Function:
         r'\s+-\s+[0-9]+(\.[0-9]+)?\s+[a-zA-Z_]\w*)*;')
     LP_LOCAL_PATTERN = re.compile(r'/\* Block weights \*/')
     LP_CONSTRAINTS_PATTERN = re.compile(r'/\* Output constraints \*/')
+    LP_DECLARATIONS_PATTERN = re.compile(
+        r'/\* Block variable declarations \*/')
     LP_BLOCK_WEIGHTS_PATTERN = re.compile(
         r'(?P<weightName>[a-zA-Z_]\w*_wb\d+)\s+=\s+' +
         r'(?P<weightVal>[\+-]?\s*[0-9]+(\.[0-9]+)?(\s+[0-9]+(\.[0-9]+)?)?' +
@@ -70,7 +72,9 @@ class Function:
                 "/**** WCET ****/\n" +
                 "{wcet_local}\n\n" +
                 "/**** WCMA ****/\n" +
-                "{wcma_local}",
+                "{wcma_local}\n\n" +
+                "/**** Declarations ****/\n" +
+                "{declarations}"
         }
         self.results = {
             "wcma": None,
@@ -179,13 +183,17 @@ class Function:
         constraints = self.extract_constraints(self.models["wcma"])
         constraints = self.strip_prefix(constraints, "wcma_")
 
+        declarations = self.extract_declarations(self.models["wcma"])
+        declarations = self.strip_prefix(declarations, "wcma_")
+
         self.models_combined["wcet_wcma"] = \
             self.models_combined["wcet_wcma"].format(
                 wcet_func=wcet_problem,
                 wcma_func=wcma_problem,
                 global_constraints=constraints,
                 wcet_local=wcet_local,
-                wcma_local=wcma_local)
+                wcma_local=wcma_local,
+                declarations=declarations)
 
         outfilename = os.path.join(self.out_dir_path, "wcet_wcma" + ".lp")
         self.write_file(outfilename, self.models_combined["wcet_wcma"])
@@ -303,6 +311,22 @@ class Function:
             print("Failed to match start of constraints")
             print(src)
             sys.exit(1)
+        start = match.start()
+
+        match = Function.LP_DECLARATIONS_PATTERN.search(src)
+        if not match:
+            print("Failed to match start of declarations")
+            sys.exit(1)
+        end = match.end()
+
+        return src[start:end].strip()
+
+    def extract_declarations(self, src):
+        match = Function.LP_DECLARATIONS_PATTERN.search(src)
+        if not match:
+            print("Failed to match start of declarations")
+            sys.exit(1)
+
         return src[match.start():].strip()
 
     def strip_prefix(self, src, pfix):
