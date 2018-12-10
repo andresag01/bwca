@@ -193,7 +193,10 @@ public class Controller
                     break;
             }
         }
-        cfgConfig.loadFile(configFile);
+        if (configFile != null)
+        {
+            cfgConfig.loadFile(configFile);
+        }
 
         if (fail)
         {
