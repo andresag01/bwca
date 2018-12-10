@@ -44,6 +44,8 @@ public class ISALine
         Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip),\\s+(?<src>.+)$");
     static final Pattern BRANCH_TARGET_ADDR =
         Pattern.compile("^(?<destAddr>[0-9a-f]+)\\s+<(?<funcName>[^>]+)>$");
+    static final Pattern BRANCH_TARGET_ADDR_NO_FUNC =
+        Pattern.compile("^[0-9a-f]+\\s+<[a-zA-Z0-9_]+\\+0x[0-9a-f]+>$");
     static final Pattern BRANCH_FUNC_NAME = Pattern.compile("^[a-zA-Z_]\\w*$");
     static final Pattern REGLIST_BASE =
         Pattern.compile("^(?<baseReg>r[0-7])!?,\\s+(?<regList>.*)$");
@@ -177,6 +179,11 @@ public class ISALine
             targetFunction = funcName;
             targetFunctionAddress = address;
         }
+        else if (type == InstructionType.BRANCH_LINK)
+        {
+            System.out.println("Cound not parse function in '" + this + "'");
+            System.exit(1);
+        }
 
         if (inst == Instruction.B)
         {
@@ -250,6 +257,27 @@ public class ISALine
     public String getOpcode()
     {
         return opcode;
+    }
+
+    private void processBranchLinkInstruction(String body)
+    {
+        Matcher match = BRANCH_TARGET_ADDR_NO_FUNC.matcher(body);
+
+        if (match.matches())
+        {
+            // BL is being used in place of a regular B instruction
+            inst = Instruction.B;
+            type = InstructionType.BRANCH;
+            pred = Predicate.AL;
+        }
+        else
+        {
+            // BL is actuall a function call
+            inst = Instruction.BL;
+            type = InstructionType.BRANCH_LINK;
+        }
+
+        parseBranchTargetAddress(body);
     }
 
     private void parseInstruction()
@@ -449,9 +477,12 @@ public class ISALine
                 break;
 
             case "bl":
-                type = InstructionType.BRANCH_LINK;
-                inst = Instruction.BL;
-                parseBranchTargetAddress(body);
+                // Sometimes the bl instruction is used as a regular branch
+                // within the function because the immediate of the regular
+                // branches is not large enough to hold the immediate. We need
+                // to identify this condition here and decide whether we are
+                // dealing with a regular branch or a branch with link
+                processBranchLinkInstruction(body);
                 break;
 
             case "bx":
