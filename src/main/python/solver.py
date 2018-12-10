@@ -357,7 +357,7 @@ class Function:
                 if not match:
                     break
                 val = Function.LP_MULTIPLICATION_PATTERN.sub(match.group("lhs")
-                    + " * " + match.group("rhs"), val)
+                    + " * " + match.group("rhs"), val, count=1)
 
             # Evaluate the expression
             weights[name] = eval_expr(val)
