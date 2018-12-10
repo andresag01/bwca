@@ -133,16 +133,18 @@ class Function:
             func.check_recursion(visited_funcs)
             visited_funcs.remove(func.name)
 
-    def solve_ilp(self, visited_funcs):
+    def solve_ilp(self, visited_funcs, func_dep_tree):
         if self.name in visited_funcs:
             # We have already processed this function
             return
 
         visited_funcs.add(self.name)
+        func_dep_tree[self.name] = set([])
 
         # Solve all the dependencies of this function
         for dep in self.deps:
-            dep.solve_ilp(visited_funcs)
+            func_dep_tree[self.name].add(dep.name)
+            dep.solve_ilp(visited_funcs, func_dep_tree)
 
         print("Processing " + self.name)
 
@@ -208,6 +210,12 @@ class Function:
             self.extract_result(lpoutput)
 
         ######################################################################
+
+        # The WCET and WCMA for the function are not solved using LP solve as
+        # we already have the path through the program found when getting the
+        # solution for WCET_WCMA. Instead, we need to extract the problem
+        # statement from the corresponding .lp files replace the values for
+        # blocks and edges and simply solve the arithmetic.
 
         ################
         # Solve for WCET
@@ -454,7 +462,22 @@ def main(indir, entry_func, outdir):
 
     # Solve ILP for each of the functions
     visited_funcs = set([])
-    funcs[entry_func].solve_ilp(visited_funcs)
+    func_dep_tree = {}
+    funcs[entry_func].solve_ilp(visited_funcs, func_dep_tree)
+    node_style_func = lambda x: \
+        "style=filled,fillcolor=red," if x == entry_func else ""
+
+    # Write function call tree in dot format
+    with open(os.path.join(outdir, "call_tree.dot"), "w") as f_call_tree:
+        f_call_tree.write("digraph G {\n")
+        for key in func_dep_tree.keys():
+            f_call_tree.write("    {0} [{1}label=\"{2}\"];\n".format(
+                key, node_style_func(key), key))
+        for caller, val in func_dep_tree.items():
+            for callee in val:
+                f_call_tree.write("    {0} -> {1} [color=black];\n".format(
+                    caller, callee))
+        f_call_tree.write("}")
 
     # Write global results to a file
     result = ""
