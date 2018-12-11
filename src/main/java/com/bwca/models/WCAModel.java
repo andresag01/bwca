@@ -13,11 +13,20 @@ public class WCAModel extends Model
 {
     private Map<ISABlock, Long> wfi;
     private Map<ISABlock, Long> malloc;
+    private String mallocFunctionName;
+    private String callocFunctionName;
+    private String reallocFunctionName;
 
-    public WCAModel()
+    public WCAModel(String mallocFunctionName,
+                    String callocFunctionName,
+                    String reallocFunctionName)
     {
         wfi = new HashMap<ISABlock, Long>();
         malloc = new HashMap<ISABlock, Long>();
+
+        this.mallocFunctionName = mallocFunctionName;
+        this.callocFunctionName = callocFunctionName;
+        this.reallocFunctionName = reallocFunctionName;
     }
 
     public String getName()
@@ -74,9 +83,9 @@ public class WCAModel extends Model
         {
             String targetFunc = inst.getTargetFunction();
             if (targetFunc != null &&
-                (targetFunc.contains("malloc") ||
-                 targetFunc.contains("calloc") ||
-                 targetFunc.contains("realloc")))
+                (targetFunc.contains(mallocFunctionName) ||
+                 targetFunc.contains(callocFunctionName) ||
+                 targetFunc.contains(reallocFunctionName)))
             {
                 switch (inst.getType())
                 {
