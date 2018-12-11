@@ -338,15 +338,21 @@ public class ISAFunction
                             break;
                         }
                         else if (name.equals("success") &&
-                                 inst.getOpcode().equals("bkpt"))
+                                 inst.getInstruction() == Instruction.BKPT)
                         {
                             // This is the "special" success() function that
                             // terminates in a bkpt instruction and indicates
                             // success for the simulator
                             break;
                         }
+                        else if (inst.getInstruction() == Instruction.UDF)
+                        {
+                            // This is an undefined instruction, so skip over
+                            // it
+                            break;
+                        }
                         else if (name.equals("abort") &&
-                                 inst.getOpcode().equals("svc"))
+                                 inst.getInstruction() == Instruction.SVC)
                         {
                             // This is the "special" abort() function that
                             // terminates in a bkpt instruction and indicates

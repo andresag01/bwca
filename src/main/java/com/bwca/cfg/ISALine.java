@@ -713,8 +713,15 @@ public class ISALine
                 inst = Instruction.CPS;
                 break;
 
+            case "udf":
+                type = InstructionType.OTHER;
+                inst = Instruction.UDF;
+                break;
+
             default:
-                System.out.println("Unrecognized instruction " + opcode);
+                System.out.printf("Unrecognized instruction '%s' at 0x%08x\n",
+                                  opcode,
+                                  address);
                 System.exit(1);
         }
     }

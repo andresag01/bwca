@@ -295,6 +295,7 @@ public class Controller
         ISAModule module = new ISAModule(outputDir, cfgConfig);
         if (module.parseFunctions(readelf, objdump) != 0)
         {
+            module.writeDotRepresentation(null);
             module.printMissingInfoMessages();
             System.exit(1);
         }
