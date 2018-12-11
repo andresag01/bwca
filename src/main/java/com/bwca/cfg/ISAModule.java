@@ -179,7 +179,8 @@ public class ISAModule
             }
             else
             {
-                func.writeDotFile( outDir + ".dot", null);
+                func.writeDotFile(outDir + File.separator + "partial.dot",
+                                  null);
             }
         }
     }
