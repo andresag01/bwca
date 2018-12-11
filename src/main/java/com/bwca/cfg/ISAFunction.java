@@ -118,12 +118,26 @@ public class ISAFunction
             }
 
             // Check that the function values match the symbol table data
-            if (!this.name.equals(name))
+            if (name.indexOf(this.name) == -1)
             {
-                // Not the correct function
+                // We use find() because sometimes the name in readelf is
+                // cropped, so we need to check that name is a substring of
+                // this.name instead of an identical match
                 continue;
             }
 
+            if (this.address != null && this.address != address)
+            {
+                // Not the correct function because even though the name in
+                // readelf is a substring of this.name, but the address does
+                // not match. Therefore, the substring matching is aliased to
+                // another function
+                continue;
+            }
+
+            // We need to check if the address is null because functions that
+            // are in the config file do not have an address. Instead, we
+            // discover the address when parsing the objdump
             if (this.address == null)
             {
                 this.address = address;
@@ -139,6 +153,10 @@ public class ISAFunction
                                   name);
                 System.exit(1);
             }
+
+            // The readelf output sometimes has the function address clipped,
+            // so make sure we use the function name from the objdump output
+            this.name = name;
 
             // Found the start of the function
             foundFunc = true;

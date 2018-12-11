@@ -56,6 +56,9 @@ public class ISAModule
             String name = entry.getKey();
             long size = entry.getValue();
 
+            // Do not try to work out the function address from the symbol
+            // table because the readelf output has long function names clipped
+
             ISAFunction func = new ISAFunction(size, name, config);
             if (func.parseInstructions(objdump) != 0)
             {
