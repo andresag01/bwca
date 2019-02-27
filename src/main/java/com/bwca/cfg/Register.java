@@ -50,18 +50,22 @@ public enum Register {
             case "R6":
                 return R6;
 
+            case "WR":
             case "R7":
                 return R7;
 
             case "R8":
                 return R8;
 
+            case "SB":
             case "R9":
                 return R9;
 
+            case "SL":
             case "R10":
                 return R10;
 
+            case "FP":
             case "R11":
                 return R11;
 
@@ -70,11 +74,14 @@ public enum Register {
                 return R12;
 
             case "SP":
+            case "R13":
                 return SP;
 
+            case "R14":
             case "LR":
                 return LR;
 
+            case "R15":
             case "PC":
                 return PC;
 

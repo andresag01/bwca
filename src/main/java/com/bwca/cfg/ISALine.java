@@ -41,7 +41,8 @@ public class ISALine
                         + "(,\\s+(r[0-7]|pc|lr))*)\\}$");
     static final Pattern SPLIT_REGLIST = Pattern.compile(",\\s+");
     static final Pattern REG_OPERANDS2_3 =
-        Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip),\\s+(?<src>.+)$");
+        Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip|fp|sl|sb|wr),"
+                        + "\\s+(?<src>.+)$");
     static final Pattern BRANCH_TARGET_ADDR =
         Pattern.compile("^(?<destAddr>[0-9a-f]+)\\s+<(?<funcName>[^>]+)>$");
     static final Pattern BRANCH_TARGET_ADDR_NO_FUNC =
