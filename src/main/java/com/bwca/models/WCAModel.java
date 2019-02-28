@@ -66,7 +66,8 @@ public class WCAModel extends Model
     public void addLineCost(ISABlock block, ISALine inst)
     {
         Long wfiCost = wfi.get(block);
-        Long mallocCost = malloc.get(block);;
+        Long mallocCost = malloc.get(block);
+        ;
 
         if (wfiCost == null)
         {

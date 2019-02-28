@@ -254,8 +254,8 @@ public class ISAFunction
                                                + "does not have information");
                             System.exit(1);
                         }
-                        outOfFuncBranchTargetAddrs.put(destAddress,
-                                                    inst.getTargetFunction());
+                        outOfFuncBranchTargetAddrs.put(
+                            destAddress, inst.getTargetFunction());
                     }
                 }
             }
@@ -400,8 +400,8 @@ public class ISAFunction
                         // the lr register or an appropriate value). At the
                         // moment we fail
                         System.out.println("Last block of function '" + name +
-                                           "' terminates in unexpected " +
-                                           "(non-branch) instruction");
+                                           "' terminates in unexpected "
+                                           + "(non-branch) instruction");
                         System.out.println(blocks.get(i));
                         System.exit(1);
                     }
@@ -466,7 +466,6 @@ public class ISAFunction
             blocks.get(i).addEdge(dummyBlock);
         }
         blocks.add(dummyBlock);
-
 
         // Check that there is at least one exit block and that no exit block
         // has outgoing edges
@@ -703,8 +702,7 @@ public class ISAFunction
         public int callCount;
         public long targetAddress;
 
-        public FunctionCallInformation(int callCount,
-                                       long targetAddress)
+        public FunctionCallInformation(int callCount, long targetAddress)
         {
             this.callCount = callCount;
             this.targetAddress = targetAddress;
@@ -712,10 +710,10 @@ public class ISAFunction
     };
 
     private Map<String, FunctionCallInformation> getFunctionCalls(
-                                                                ISABlock block)
+        ISABlock block)
     {
         Map<String, FunctionCallInformation> callInfo =
-                                new HashMap<String, FunctionCallInformation>();
+            new HashMap<String, FunctionCallInformation>();
         FunctionCallInformation info;
         String functionName;
         long functionAddress;
@@ -789,8 +787,8 @@ public class ISAFunction
                 callInfo = getFunctionCalls(block);
 
                 // Add the block cost to the top level formula
-                blockCost.append(weightPfix + block.getId() + " " +
-                                 blockPfix + block.getId());
+                blockCost.append(weightPfix + block.getId() + " " + blockPfix +
+                                 block.getId());
                 for (BranchTarget edge : block.getEdges())
                 {
                     String neg = model.getNegativeEdgeCost(edge);
@@ -932,19 +930,20 @@ public class ISAFunction
                     }
                     else
                     {
-                        System.out.printf("No information about loop at " +
-                                          "0x%08x\n",
+                        System.out.printf("No information about loop at "
+                                              + "0x%08x\n",
                                           inst.getAddress());
                     }
 
-                    String constraint = String.format("\n/* Header 0x%08x */\n"
-                                                      + "%s %s%d <= %s%d;\n",
-                                                      inst.getAddress(),
-                                                      lbound,
-                                                      blockPfix,
-                                                      block.getId(),
-                                                      blockPfix,
-                                                      successor.getId());
+                    String constraint =
+                        String.format("\n/* Header 0x%08x */\n"
+                                          + "%s %s%d <= %s%d;\n",
+                                      inst.getAddress(),
+                                      lbound,
+                                      blockPfix,
+                                      block.getId(),
+                                      blockPfix,
+                                      successor.getId());
                     loopConstraints.append(constraint);
 
                     constraint = String.format("%s%d <= %s %s%d;\n",
@@ -966,15 +965,13 @@ public class ISAFunction
             // Block and edge declarations
             for (ISABlock block : blocks)
             {
-                blockDecls.append(String.format("int %s%d;\n",
-                                                blockPfix,
-                                                block.getId()));
+                blockDecls.append(
+                    String.format("int %s%d;\n", blockPfix, block.getId()));
 
                 for (BranchTarget edge : block.getEdges())
                 {
-                    edgeDecls.append(String.format("int %s%d;\n",
-                                                   edgePfix,
-                                                   edge.getId()));
+                    edgeDecls.append(
+                        String.format("int %s%d;\n", edgePfix, edge.getId()));
                 }
             }
 

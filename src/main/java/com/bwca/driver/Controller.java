@@ -162,7 +162,7 @@ public class Controller
                     if (i + 1 == args.length)
                     {
                         System.out.println(
-                                        "-malloc option takes one argument");
+                            "-malloc option takes one argument");
                         System.exit(1);
                     }
                     mallocFunctionName = args[++i];
@@ -172,7 +172,7 @@ public class Controller
                     if (i + 1 == args.length)
                     {
                         System.out.println(
-                                        "-calloc option takes one argument");
+                            "-calloc option takes one argument");
                         System.exit(1);
                     }
                     callocFunctionName = args[++i];
@@ -182,7 +182,7 @@ public class Controller
                     if (i + 1 == args.length)
                     {
                         System.out.println(
-                                        "-realloc option takes one argument");
+                            "-realloc option takes one argument");
                         System.exit(1);
                     }
                     reallocFunctionName = args[++i];

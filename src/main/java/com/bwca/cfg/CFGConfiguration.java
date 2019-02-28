@@ -24,13 +24,15 @@ public class CFGConfiguration
     static final Pattern CMD_FUNC = Pattern.compile("^function\\s+"
                                                     + "(?<name>[a-zA-Z_]\\w*)"
                                                     + "\\s+(?<size>\\d+)$");
-    static final Pattern CMD_LOOP_BOUND = Pattern.compile("^loopbound\\s+"
+    static final Pattern CMD_LOOP_BOUND =
+        Pattern.compile("^loopbound\\s+"
                         + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
                         + "\\s+min"
                         + "\\s+(?<min>\\d+)"
                         + "\\s+max"
                         + "\\s+(?<max>\\d+)$");
-    static final Pattern CMD_ALLOC_BOUND = Pattern.compile("^allocbound\\s+"
+    static final Pattern CMD_ALLOC_BOUND =
+        Pattern.compile("^allocbound\\s+"
                         + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
                         + "\\s+(?<size>\\d+)$");
 
@@ -136,7 +138,7 @@ public class CFGConfiguration
                     if (funcs.put(name, size) != null)
                     {
                         System.out.printf("Function %s more than once in "
-                                          + "config\n",
+                                              + "config\n",
                                           name);
                         System.exit(1);
                     }
@@ -161,8 +163,7 @@ public class CFGConfiguration
 
                 System.out.printf("Invalid command '%s'\n", line);
                 System.exit(1);
-            }
-            while (true);
+            } while (true);
 
             reader.close();
         }
@@ -193,17 +194,15 @@ public class CFGConfiguration
         System.out.println("Functions:");
         for (Map.Entry<String, Long> entry : funcs.entrySet())
         {
-            System.out.printf("    %s: %d\n",
-                              entry.getKey(),
-                              entry.getValue());
+            System.out.printf(
+                "    %s: %d\n", entry.getKey(), entry.getValue());
         }
 
         System.out.println("Allocation sizes:");
         for (Map.Entry<Long, Long> entry : allocs.entrySet())
         {
-            System.out.printf("    0x%08x: %d\n",
-                              entry.getKey(),
-                              entry.getValue());
+            System.out.printf(
+                "    0x%08x: %d\n", entry.getKey(), entry.getValue());
         }
     }
 }

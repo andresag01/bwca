@@ -96,8 +96,8 @@ public class ISALine
     {
         if (inst != Instruction.WFI && type != InstructionType.BRANCH_LINK)
         {
-            System.out.println("Asking allocation size of non wfi or malloc" +
-                               " call");
+            System.out.println("Asking allocation size of non wfi or malloc"
+                               + " call");
             System.exit(1);
         }
 
@@ -108,8 +108,8 @@ public class ISALine
         else
         {
             /* No information about the allocation */
-            System.out.printf("No information about allocation at 0x%08x " +
-                              "(%s %s)\n",
+            System.out.printf("No information about allocation at 0x%08x "
+                                  + "(%s %s)\n",
                               address,
                               opcode,
                               body);
@@ -191,8 +191,7 @@ public class ISALine
             branchTargets.add(new BranchTarget(address, true));
             if (type == InstructionType.COND_BRANCH)
             {
-                branchTargets.add(
-                    new BranchTarget(this.address + 2, false));
+                branchTargets.add(new BranchTarget(this.address + 2, false));
             }
         }
     }
@@ -472,9 +471,8 @@ public class ISALine
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BLX;
                 // BLX instructions are not tagged with info about the call
-                infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                           address,
-                                           "blx"));
+                infoMsgs.add(
+                    String.format(infoMsgFmtBrandDst, address, "blx"));
                 break;
 
             case "bl":
@@ -503,9 +501,8 @@ public class ISALine
                     type = InstructionType.BRANCH;
                     if (!exit)
                     {
-                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                   address,
-                                                   "add"));
+                        infoMsgs.add(
+                            String.format(infoMsgFmtBrandDst, address, "add"));
                     }
                 }
                 break;
@@ -520,9 +517,8 @@ public class ISALine
                     type = InstructionType.BRANCH;
                     if (!exit)
                     {
-                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                   address,
-                                                   "sub"));
+                        infoMsgs.add(
+                            String.format(infoMsgFmtBrandDst, address, "sub"));
                     }
                 }
                 break;
@@ -543,9 +539,8 @@ public class ISALine
                     type = InstructionType.BRANCH;
                     if (!exit)
                     {
-                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                   address,
-                                                   "cpy"));
+                        infoMsgs.add(
+                            String.format(infoMsgFmtBrandDst, address, "cpy"));
                     }
                 }
                 break;
@@ -560,9 +555,8 @@ public class ISALine
                     type = InstructionType.BRANCH;
                     if (!exit)
                     {
-                        infoMsgs.add(String.format(infoMsgFmtBrandDst,
-                                                   address,
-                                                   "mov"));
+                        infoMsgs.add(
+                            String.format(infoMsgFmtBrandDst, address, "mov"));
                     }
                 }
                 break;

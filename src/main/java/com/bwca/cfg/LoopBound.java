@@ -7,8 +7,8 @@ public class LoopBound
 
     public LoopBound(long lbound, long ubound)
     {
-		this.lbound = lbound;
-		this.ubound = ubound;
+        this.lbound = lbound;
+        this.ubound = ubound;
     }
 
     public long getUpperBound()

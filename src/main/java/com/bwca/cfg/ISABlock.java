@@ -209,11 +209,8 @@ public class ISABlock
             nodeColor = "fillcolor=orange,";
         }
 
-        builder.append(String.format("block%d [%slabel=\"block%d%s\\l",
-                                     id,
-                                     nodeColor,
-                                     id,
-                                     attrsStr));
+        builder.append(String.format(
+            "block%d [%slabel=\"block%d%s\\l", id, nodeColor, id, attrsStr));
         for (ISALine inst : insts)
         {
             builder.append(inst.toString() + "\\l");
@@ -236,8 +233,7 @@ public class ISABlock
         return builder.toString();
     }
 
-    public void edgesToString(ArrayList<String> output,
-                              Model model)
+    public void edgesToString(ArrayList<String> output, Model model)
     {
         for (BranchTarget edge : edges)
         {

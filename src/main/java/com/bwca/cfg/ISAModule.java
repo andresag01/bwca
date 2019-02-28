@@ -87,11 +87,11 @@ public class ISAModule
             {
                 continue;
             }
-            ISAFunction func = new ISAFunction(
-                                    Long.parseLong(match.group("address"), 16),
-                                    size,
-                                    name,
-                                    config);
+            ISAFunction func =
+                new ISAFunction(Long.parseLong(match.group("address"), 16),
+                                size,
+                                name,
+                                config);
             if (func.parseInstructions(objdump) != 0)
             {
                 ret = -1;
@@ -157,8 +157,8 @@ public class ISAModule
 
             createOutputDirectory(outDir);
 
-            func.writeILP(
-                outDir + File.separator + model.getName() + ".lp", model);
+            func.writeILP(outDir + File.separator + model.getName() + ".lp",
+                          model);
         }
     }
 
