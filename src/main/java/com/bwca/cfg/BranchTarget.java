@@ -8,7 +8,6 @@ public class BranchTarget
     private Boolean cond;
     private ISABlock block;
     private int id;
-    private boolean loopExit;
 
     public BranchTarget(Long address, Boolean cond)
     {
@@ -16,7 +15,6 @@ public class BranchTarget
         this.cond = cond;
         this.block = null;
         this.id = 0;
-        this.loopExit = false;
     }
 
     public BranchTarget(ISABlock block)
@@ -25,7 +23,6 @@ public class BranchTarget
         this.cond = null;
         this.block = block;
         this.id = 0;
-        this.loopExit = false;
     }
 
     public String toString()
@@ -61,15 +58,5 @@ public class BranchTarget
     public Long getAddress()
     {
         return address;
-    }
-
-    public boolean getLoopExit()
-    {
-        return loopExit;
-    }
-
-    public void setLoopExit(boolean loopExit)
-    {
-        this.loopExit = loopExit;
     }
 }

@@ -529,7 +529,6 @@ public class ISAFunction
         // Initialize everything to zero/null/false
         for (ISABlock block : blocks)
         {
-            block.setLoopBranch(false);
             block.setLoopHeader(false);
             block.setInnerLoopHeader(null);
             block.setDFSPosition(0);
@@ -538,85 +537,6 @@ public class ISAFunction
 
         // Label loop headers
         traverseInDFS(entry, 1);
-
-        // Label loop branches and exit edges.
-        //
-        // The traverseInDFS() algorithm gives us a CFG with labelled loop
-        // headers. The header of a loop is the first block within that loop
-        // that the algorithm finds in a DFS traversal. Every block belonging
-        // to that loop will also be tagged with a reference to their closest
-        // header block (recall that the headers of outer loops can also be
-        // considered headers of inner loops, but this is not tracked).
-        //
-        // The purpose of the labelLoopBranches() algorithm is to work out
-        // which edges exit loops so that we can use this information for the
-        // ILP construction. The idea is to look at each block individually
-        // and check some conditions based on their loop headers to work out
-        // whether the edge exits a loop. However, this is very tricky and
-        // will almost certainly not work in all cases. In particular, this
-        // tool cannot handle loops where the block with the exit edge is not
-        // the same as the branch back block. For example, we do not know how
-        // to formulate an ILP for the graph above
-        //
-        //    +---------+
-        //    |         |
-        //    v         |
-        // -> A -> B -> C
-        //         |
-        //         v
-        //         D
-        //
-        // The loop in that CFG is within the blocks {A, B, C} and the branch
-        // back edge is <C,A>. However, the exit edge is <B,D>
-        labelLoopBranches();
-    }
-
-    private void labelLoopBranches()
-    {
-        ISABlock curHeader;
-        ISABlock nextHeader;
-        ISABlock successor;
-        int exits;
-
-        for (ISABlock block : blocks)
-        {
-            curHeader = block.getInnerLoopHeader();
-            nextHeader = block.isLoopHeader() ? block : curHeader;
-            exits = 0;
-
-            for (BranchTarget target : block.getEdges())
-            {
-                successor = target.getBlock();
-
-                if (curHeader == successor.getInnerLoopHeader() &&
-                    nextHeader != successor.getInnerLoopHeader() &&
-                    block != successor)
-                {
-                    tagLoopExit(block, target);
-                    exits++;
-                }
-                else if (successor.getInnerLoopHeader() == null &&
-                         curHeader != successor && curHeader != null)
-                {
-                    tagLoopExit(block, target);
-                    exits++;
-                }
-            }
-
-            if (exits > 1)
-            {
-                System.out.printf("Block%d has %d loop exit edges\n",
-                                  block.getId(),
-                                  exits);
-                System.exit(1);
-            }
-        }
-    }
-
-    private void tagLoopExit(ISABlock block, BranchTarget target)
-    {
-        target.setLoopExit(true);
-        block.setLoopBranch(true);
     }
 
     private ISABlock traverseInDFS(ISABlock block, int dfsPosition)
@@ -909,85 +829,62 @@ public class ISAFunction
             // Loop constraints
             for (ISABlock block : blocks)
             {
-                if (block.isLoopBranch())
+                for (BranchTarget edge : block.getEdges())
                 {
-                    boolean wroteBound = false;
+                    ISABlock successor = edge.getBlock();
 
-                    // Make sure the loop does not have more than one exit
-                    if (block.getEdges().size() > 2)
+                    if (!successor.isLoopHeader())
                     {
-                        System.out.println("Loop has more than 2 output "
-                                           + "edges");
-                        System.exit(1);
+                        continue;
+                    }
+                    else if (block.getInnerLoopHeader() == successor)
+                    {
+                        continue;
+                    }
+                    else if (block == successor)
+                    {
+                        continue;
                     }
 
-                    for (BranchTarget edge : block.getEdges())
+                    // This successor is the header of a loop and needs a bound
+                    ISALine inst = block.getFirstLine();
+                    String lbound = "BOUND";
+                    String ubound = "BOUND";
+
+                    // Check if we have information about this bound in the
+                    // config
+                    Map<Long, LoopBound> loops = config.getLoopBounds();
+
+                    if (loops.containsKey(inst.getAddress()))
                     {
-                        if (edge.getLoopExit())
-                        {
-                            // This is the exit edge of the loop
-                            ISALine inst = block.getLastLine();
-                            String lbound = "BOUND";
-                            String ubound = "BOUND";
-
-                            // Check if we have information about this bound in
-                            // the config
-                            Map<Long, LoopBound> loops =
-                                config.getLoopBounds();
-
-                            if (loops.containsKey(inst.getAddress()))
-                            {
-                                LoopBound bound = loops.get(inst.getAddress());
-                                lbound = Long.toString(bound.getLowerBound());
-                                ubound = Long.toString(bound.getUpperBound());
-                            }
-                            else
-                            {
-                                System.out.printf("No information about loop "
-                                                  + "at 0x%08x\n",
-                                                  inst.getAddress());
-                            }
-
-                            String constraint =
-                                String.format("/* Branch at 0x%08x */\n" +
-                                              "%s%d >= %s %s%d;\n",
-                                              inst.getAddress(),
-                                              blockPfix,
-                                              block.getId(),
-                                              lbound,
-                                              edgePfix,
-                                              edge.getId());
-                            loopConstraints.append(constraint);
-
-                            constraint = String.format("%s%d <= %s %s%d;\n",
-                                                       blockPfix,
-                                                       block.getId(),
-                                                       ubound,
-                                                       edgePfix,
-                                                       edge.getId());
-                            loopConstraints.append(constraint);
-
-                            if (wroteBound)
-                            {
-                                // Should never happen!
-                                System.out.println("Somehow loop at block"
-                                                   + block.getId() + " has "
-                                                   + "two exits at function "
-                                                   + name);
-                                System.exit(1);
-                            }
-                            wroteBound = true;
-                        }
+                        LoopBound bound = loops.get(inst.getAddress());
+                        lbound = Long.toString(bound.getLowerBound());
+                        ubound = Long.toString(bound.getUpperBound());
+                    }
+                    else
+                    {
+                        System.out.printf("No information about loop at " +
+                                          "0x%08x\n",
+                                          inst.getAddress());
                     }
 
-                    if (!wroteBound)
-                    {
-                        // Should never happen!
-                        System.out.println("Somehow loop at block "
-                                           + block.getId() + " has no exits "
-                                           + "in function " + name + "!");
-                        System.exit(1);
-                    }
+                    String constraint = String.format("/* Header 0x%08x */\n" +
+                                                      "%s %s%d <= %s%d;\n",
+                                                      inst.getAddress(),
+                                                      lbound,
+                                                      blockPfix,
+                                                      block.getId(),
+                                                      blockPfix,
+                                                      successor.getId());
+                    loopConstraints.append(constraint);
+
+                    constraint = String.format("%s%d <= %s %s%d;\n",
+                                               blockPfix,
+                                               successor.getId(),
+                                               ubound,
+                                               blockPfix,
+                                               block.getId());
+                    loopConstraints.append(constraint);
                 }
             }
 

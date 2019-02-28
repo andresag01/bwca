@@ -16,8 +16,6 @@ public class ISABlock
     // Fields needed for loop detection
     // loopHeader: The entry block for a loop
     private boolean loopHeader;
-    // loopBranch: The block with the conditional branch to iterate
-    private boolean loopBranch;
     private ISABlock innerLoopHeader;
     private int dfsPosition;
 
@@ -31,7 +29,6 @@ public class ISABlock
         this.exit = false;
 
         this.loopHeader = false;
-        this.loopBranch = false;
         this.innerLoopHeader = null;
         this.dfsPosition = 0;
     }
@@ -49,16 +46,6 @@ public class ISABlock
     public boolean isExit()
     {
         return exit;
-    }
-
-    public boolean isLoopBranch()
-    {
-        return loopBranch;
-    }
-
-    public void setLoopBranch(boolean loopBranch)
-    {
-        this.loopBranch = loopBranch;
     }
 
     public boolean isLoopHeader()
@@ -109,6 +96,18 @@ public class ISABlock
     public void addLine(ISALine inst)
     {
         insts.add(inst);
+    }
+
+    public ISALine getFirstLine()
+    {
+        int size = insts.size();
+        if (size < 1)
+        {
+            System.out.println("Block has no instructions!");
+            System.exit(1);
+        }
+
+        return insts.get(0);
     }
 
     public ISALine getLastLine()
@@ -180,11 +179,7 @@ public class ISABlock
             attrsStr = " {" + attrs + "}";
         }
 
-        if (loopBranch)
-        {
-            nodeColor = "fillcolor=red,";
-        }
-        else if (loopHeader)
+        if (loopHeader)
         {
             nodeColor = "fillcolor=orange,";
         }
@@ -240,10 +235,6 @@ public class ISABlock
                     edgeCost = model.getEdgeSummary(edge);
                 }
                 edgeCost = (edgeCost == null) ? "" : "[" + edgeCost + "]";
-                if (edge.getLoopExit())
-                {
-                    edgeColor = "blue";
-                }
                 String edgeStr = String.format("block%d -> block%d "
                                                    + "[label=\"e%d %s\","
                                                    + "color=%s]",
