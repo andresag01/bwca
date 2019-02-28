@@ -18,9 +18,6 @@ public class ISABlock
     private boolean loopHeader;
     // loopBranch: The block with the conditional branch to iterate
     private boolean loopBranch;
-    // intermediateLoopBranch: Signals that this block is a node that is
-    // between the loop "return" conditional branch and the loop header
-    private boolean intermediateLoopBranch;
     private ISABlock innerLoopHeader;
     private int dfsPosition;
 
@@ -34,7 +31,6 @@ public class ISABlock
         this.exit = false;
 
         this.loopHeader = false;
-        this.intermediateLoopBranch = false;
         this.loopBranch = false;
         this.innerLoopHeader = null;
         this.dfsPosition = 0;
@@ -73,16 +69,6 @@ public class ISABlock
     public void setLoopHeader(boolean loopHeader)
     {
         this.loopHeader = loopHeader;
-    }
-
-    public boolean isIntermediateLoopBranch()
-    {
-        return intermediateLoopBranch;
-    }
-
-    public void setIntermediateLoopBranch(boolean intermediateLoopBranch)
-    {
-        this.intermediateLoopBranch = intermediateLoopBranch;
     }
 
     public ISABlock getInnerLoopHeader()
@@ -173,15 +159,21 @@ public class ISABlock
         StringBuilder attrs = new StringBuilder();
         String attrsStr = "";
         String nodeColor = "";
+        String innerLoopHeaderStr = "";
 
         if (isEntry)
         {
             attrs.append("entry");
         }
-        else if (exit)
+        if (exit)
         {
             attrs.append((attrs.length() > 0) ? "," : "");
             attrs.append("exit");
+        }
+        if (innerLoopHeader != null)
+        {
+            attrs.append((attrs.length() > 0) ? "," : "");
+            attrs.append("block" + innerLoopHeader.getId());
         }
         if (attrs.length() > 0)
         {
@@ -192,7 +184,7 @@ public class ISABlock
         {
             nodeColor = "fillcolor=red,";
         }
-        else if (loopHeader || intermediateLoopBranch)
+        else if (loopHeader)
         {
             nodeColor = "fillcolor=orange,";
         }
