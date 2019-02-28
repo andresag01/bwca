@@ -25,12 +25,39 @@ public class ISAFunction
     static final Pattern FUNC = Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+"
                                                 + "<(?<name>[^>]+)>:$");
     static final String DOT_TOP_LEVEL = "digraph G {\n"
-        + "    style=filled;\n"
-        + "    node [shape=box,style=filled,fillcolor=yellow];\n"
-        + "    label = \"%s\";\n"
-        + "    labelloc = \"t\";\n"
+        + "    subgraph cluster_cfg {\n"
+        + "        graph [style=solid];\n"
+        + "        style=filled;\n"
+        + "        node [shape=box,style=filled,fillcolor=yellow];\n"
+        + "        label = \"%s\";\n"
+        + "        labelloc = \"t\";\n"
         + "%s"
         + "%s"
+        + "    }\n"
+        + "\n"
+        + "    subgraph cluster_legend {\n"
+        + "        graph [style=solid];\n"
+        + "        style = filled;\n"
+        + "        label = \"Legend\";\n"
+        + "        node [shape=box,style=filled,color=lightgrey];\n"
+        + "        key [label=<<table border=\"0\" "
+        + "                           cellpadding=\"4\" "
+        + "                           cellspacing=\"6\" "
+        + "                           cellborder=\"0\">\n"
+        + "                <tr>\n"
+        + "                    <td align=\"left\">Basic Block</td>"
+        + "                    <td bgcolor=\"yellow\">    </td>"
+        + "                </tr>\n"
+        + "                <tr>\n"
+        + "                    <td align=\"left\">Loop Block</td>\n"
+        + "                    <td bgcolor=\"orange\">    </td>\n"
+        + "                </tr>\n"
+        + "                <tr>\n"
+        + "                    <td align=\"left\">Loop Header</td>\n"
+        + "                    <td bgcolor=\"red\">    </td>\n"
+        + "                </tr>\n"
+        + "            </table>>]\n"
+        + "    }\n"
         + "}";
     static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
         + "/* Problem */\n"
@@ -958,15 +985,15 @@ public class ISAFunction
                 System.out.println("Trying to print empty function");
                 System.exit(1);
             }
-            nodesStr = String.join(";\n    ", nodes);
-            nodesStr = "    " + nodesStr;
+            nodesStr = String.join(";\n        ", nodes);
+            nodesStr = "        " + nodesStr;
             nodesStr += ";\n";
 
             String edgesStr = "";
             if (edges.size() > 0)
             {
-                edgesStr = String.join(";\n    ", edges);
-                edgesStr = "    " + edgesStr;
+                edgesStr = String.join(";\n        ", edges);
+                edgesStr = "        " + edgesStr;
                 edgesStr += ";\n";
             }
 

@@ -181,6 +181,10 @@ public class ISABlock
 
         if (loopHeader)
         {
+            nodeColor = "fillcolor=red,";
+        }
+        else if (innerLoopHeader != null)
+        {
             nodeColor = "fillcolor=orange,";
         }
 
