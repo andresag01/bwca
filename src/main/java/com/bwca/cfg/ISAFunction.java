@@ -895,8 +895,8 @@ public class ISAFunction
                                           inst.getAddress());
                     }
 
-                    String constraint = String.format("/* Header 0x%08x */\n" +
-                                                      "%s %s%d <= %s%d;\n",
+                    String constraint = String.format("\n/* Header 0x%08x */\n"
+                                                      + "%s %s%d <= %s%d;\n",
                                                       inst.getAddress(),
                                                       lbound,
                                                       blockPfix,
