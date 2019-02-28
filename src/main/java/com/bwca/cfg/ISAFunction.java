@@ -30,7 +30,7 @@ public class ISAFunction
         + "        graph [style=solid];\n"
         + "        style=filled;\n"
         + "        node [shape=box,style=filled,fillcolor=yellow];\n"
-        + "        label = \"%s\";\n"
+        + "        label = \"Function: %s()\";\n"
         + "        labelloc = \"t\";\n"
         + "%s"
         + "%s"
