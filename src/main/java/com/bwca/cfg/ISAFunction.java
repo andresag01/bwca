@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Stack;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -564,6 +565,47 @@ public class ISAFunction
 
         // Label loop headers
         traverseInDFS(entry, 1);
+
+        // Set loop depth
+        for (ISABlock block : blocks)
+        {
+            block.setMark(false);
+        }
+        Stack<ISABlock> headers = new Stack<ISABlock>();
+        findLoopDepth(entry, headers, 0);
+    }
+
+    private void findLoopDepth(ISABlock block,
+                               Stack<ISABlock> headers,
+                               int depth)
+    {
+        block.setMark(true);
+
+        if (block.isLoopHeader() || block.getInnerLoopHeader() != null)
+        {
+            if (block.isLoopHeader())
+            {
+                headers.push(block);
+                depth++;
+            }
+            else if (block.getInnerLoopHeader() != headers.peek())
+            {
+                headers.pop();
+                depth--;
+            }
+
+            block.setLoopDepth(depth - 1);
+        }
+
+        for (BranchTarget target : block.getEdges())
+        {
+            ISABlock successor = target.getBlock();
+            if (successor.isMarked())
+            {
+                continue;
+            }
+            findLoopDepth(successor, headers, depth);
+        }
     }
 
     private ISABlock traverseInDFS(ISABlock block, int dfsPosition)

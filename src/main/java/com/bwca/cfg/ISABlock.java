@@ -1,6 +1,8 @@
 package com.bwca.cfg;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.LinkedList;
 
 import com.bwca.models.Model;
 
@@ -18,6 +20,7 @@ public class ISABlock
     private boolean loopHeader;
     private ISABlock innerLoopHeader;
     private int dfsPosition;
+    private int loopDepth;
 
     public ISABlock(long startAddress, int id)
     {
@@ -31,6 +34,7 @@ public class ISABlock
         this.loopHeader = false;
         this.innerLoopHeader = null;
         this.dfsPosition = 0;
+        this.loopDepth = 0;
     }
 
     public ArrayList<ISALine> getInstructions()
@@ -76,6 +80,16 @@ public class ISABlock
     public void setDFSPosition(int position)
     {
         dfsPosition = position;
+    }
+
+    public int getLoopDepth()
+    {
+        return loopDepth;
+    }
+
+    public void setLoopDepth(int depth)
+    {
+        loopDepth = depth;
     }
 
     public void setMark(boolean val)
@@ -155,28 +169,35 @@ public class ISABlock
                               String cost)
     {
         StringBuilder builder = new StringBuilder();
-        StringBuilder attrs = new StringBuilder();
+        List<String> attrs = new LinkedList<String>();
         String attrsStr = "";
         String nodeColor = "";
-        String innerLoopHeaderStr = "";
 
         if (isEntry)
         {
-            attrs.append("entry");
+            attrs.add("entry");
         }
         if (exit)
         {
-            attrs.append((attrs.length() > 0) ? "," : "");
-            attrs.append("exit");
+            attrs.add("exit");
         }
-        if (innerLoopHeader != null)
+        if (innerLoopHeader != null || loopHeader)
         {
-            attrs.append((attrs.length() > 0) ? "," : "");
-            attrs.append("block" + innerLoopHeader.getId());
+            if (innerLoopHeader != null)
+            {
+                attrs.add("loopHeader:block" + innerLoopHeader.getId());
+            }
+            else
+            {
+                attrs.add("loopHeader:null");
+            }
+            attrs.add("loopDepth:" + loopDepth);
         }
-        if (attrs.length() > 0)
+        attrs.add("cost:" + ((cost != null) ? cost : ""));
+
+        if (attrs.size() > 0)
         {
-            attrsStr = " {" + attrs + "}";
+            attrsStr = "{" + String.join(",", attrs) + "}";
         }
 
         if (loopHeader)
@@ -188,21 +209,11 @@ public class ISABlock
             nodeColor = "fillcolor=orange,";
         }
 
-        if (cost != null)
-        {
-            cost = " [" + cost + "]";
-        }
-        else
-        {
-            cost = "";
-        }
-
-        builder.append(String.format("block%d [%slabel=\"block%d%s%s\\l",
+        builder.append(String.format("block%d [%slabel=\"block%d%s\\l",
                                      id,
                                      nodeColor,
                                      id,
-                                     attrsStr,
-                                     cost));
+                                     attrsStr));
         for (ISALine inst : insts)
         {
             builder.append(inst.toString() + "\\l");
@@ -238,7 +249,7 @@ public class ISABlock
                 {
                     edgeCost = model.getEdgeSummary(edge);
                 }
-                edgeCost = (edgeCost == null) ? "" : "[" + edgeCost + "]";
+                edgeCost = (edgeCost == null) ? "" : "{cost:" + edgeCost + "}";
                 String edgeStr = String.format("block%d -> block%d "
                                                    + "[label=\"e%d %s\","
                                                    + "color=%s]",
