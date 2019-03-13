@@ -2,10 +2,17 @@ package com.bwca.cfg;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.LinkedList;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.BufferedWriter;
+import java.io.IOException;
 
 import com.bwca.models.Model;
 
@@ -23,13 +30,28 @@ public class ISAModule
 
     private Map<String, ISAFunction> funcMap;
     private String outputDir;
+    private String entryFunction;
     private CFGConfiguration config;
 
-    public ISAModule(String outputDir, CFGConfiguration config)
+    static final String DOT_TOP_LEVEL = "digraph G {\n"
+        + "    subgraph cluster_fcg {\n"
+        + "        color = white;\n"
+        + "        node [shape=box,style=filled,fillcolor=yellow];\n"
+        + "        label = \"Function Call Graph\";\n"
+        + "        labelloc = \"t\";\n"
+        + "%s"
+        + "%s"
+        + "    }\n"
+        + "}";
+
+    public ISAModule(String outputDir,
+                     String entryFunction,
+                     CFGConfiguration config)
     {
         this.funcMap = new HashMap<String, ISAFunction>();
         this.outputDir = outputDir;
         this.config = config;
+        this.entryFunction = entryFunction;
     }
 
     public void printMissingInfoMessages()
@@ -45,65 +67,151 @@ public class ISAModule
         }
     }
 
-    public int parseFunctions(ArrayList<String> readelf,
-                              ArrayList<String> objdump)
+    private Map<String, SymbolTableRecord> parseSymbolTable(
+                                                    List<String> readelf)
     {
-        int ret = 0;
+        Map<String, SymbolTableRecord> symbolTable =
+                                    new HashMap<String, SymbolTableRecord>();
+        String name;
+        long size;
+        long addr;
 
         // Add the functions in the config file
         for (Map.Entry<String, Long> entry : config.getFunctions().entrySet())
         {
-            String name = entry.getKey();
-            long size = entry.getValue();
+            name = entry.getKey();
+            size = entry.getValue();
 
             // Do not try to work out the function address from the symbol
             // table because the readelf output has long function names clipped
 
-            ISAFunction func = new ISAFunction(size, name, config);
-            if (func.parseInstructions(objdump) != 0)
-            {
-                ret = -1;
-            }
-            if (funcMap.put(name, func) != null)
-            {
-                System.out.printf("Function %s in config found twice\n", name);
-                System.exit(1);
-            }
+            symbolTable.put(name, new SymbolTableRecord(size));
         }
 
-        // Add the functions in the symbol table (readelf output)
-        for (String line : readelf)
+        // Add functions from the readelf dump
+        for (String record : readelf)
         {
-            Matcher match = SYM_TABLE_FUNC.matcher(line);
+            Matcher match = SYM_TABLE_FUNC.matcher(record);
             if (!match.matches())
             {
                 // This is not an entry corresponding to a function symbol
                 continue;
             }
 
-            String name = match.group("name");
-            long size = Long.parseLong(match.group("size"), 10);
+            name = match.group("name");
+            addr = Long.parseLong(match.group("address"), 16);
+            size = Long.parseLong(match.group("size"), 10);
             if (size == 0)
             {
                 continue;
             }
-            ISAFunction func =
-                new ISAFunction(Long.parseLong(match.group("address"), 16),
-                                size,
-                                name,
-                                config);
-            if (func.parseInstructions(objdump) != 0)
+
+            symbolTable.put(name, new SymbolTableRecord(addr, size));
+        }
+
+        return symbolTable;
+    }
+
+    private int parseFunction(String name,
+                              String parent,
+                              Map<String, SymbolTableRecord> symbolTable,
+                              ArrayList<String> objdump)
+    {
+        ISAFunction func;
+        SymbolTableRecord symbol = symbolTable.get(name);
+        Long size, addr;
+        int ret = 0;
+
+        // Parse the function with the given name
+        if (symbol == null)
+        {
+            System.out.printf("Function %s required by %s is not listed in "
+                               + "symbol table!\n",
+                               name,
+                               (parent == null) ? "entry point" : parent);
+            System.exit(1);
+        }
+
+        size = symbol.getSize();
+        addr = symbol.getAddress();
+
+        if (addr == null)
+        {
+            func = new ISAFunction(size, name, config);
+        }
+        else
+        {
+            func = new ISAFunction(addr, size, name, config);
+        }
+
+        if (func.parseInstructions(objdump) != 0)
+        {
+            System.out.println("Something failed here");
+            ret = -1;
+        }
+        if (funcMap.put(name, func) != null)
+        {
+            System.out.printf("Function %s found more than once in symbol "
+                              + "table\n", name);
+            System.exit(1);
+        }
+
+        // Construct dependency list on other functions
+        func.buildFunctionCallDependencyList();
+
+        // Parse the given function's dependencies
+        for (String dependencyName : func.getFunctionCallDependencies())
+        {
+            if (funcMap.get(dependencyName) == null)
             {
-                ret = -1;
-            }
-            if (funcMap.put(name, func) != null)
-            {
-                System.out.printf("Function %s in config found twice\n", name);
-                System.exit(1);
+                ret = (parseFunction(dependencyName,
+                                     name,
+                                     symbolTable,
+                                     objdump) != 0) ? -1 : ret;
             }
         }
 
         return ret;
+    }
+
+    public int parseFunctions(List<String> readelf,
+                              ArrayList<String> objdump)
+    {
+        // Parse the symbol table into a data structure that we can easily
+        // look up function names on
+        Map<String, SymbolTableRecord> symbolTable = parseSymbolTable(readelf);
+
+        // Start parsing functions from the entry point onwards
+        return parseFunction(entryFunction, null, symbolTable, objdump);
+    }
+
+    private boolean checkRecursion(Set<String> callStack, String stackTop)
+    {
+        ISAFunction topFunc = funcMap.get(stackTop);
+
+        callStack.add(stackTop);
+
+        for (String callee : topFunc.getFunctionCallDependencies())
+        {
+            if (callStack.contains(callee))
+            {
+                return true;
+            }
+
+            if (checkRecursion(callStack, callee))
+            {
+                return true;
+            }
+        }
+
+        callStack.remove(stackTop);
+
+        return false;
+    }
+
+    public boolean hasRecursiveFunctionCalls()
+    {
+        return checkRecursion(new HashSet<String>(), entryFunction);
     }
 
     public void analyzeCFG()
@@ -162,8 +270,9 @@ public class ISAModule
         }
     }
 
-    public void writeDotRepresentation(Model model)
+    public void writeCFGInDotRepresentation(Model model)
     {
+        // Write the CFGs for each function
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
         {
             String name = entry.getKey();
@@ -182,6 +291,63 @@ public class ISAModule
                 func.writeDotFile(outDir + File.separator + "partial.dot",
                                   null);
             }
+        }
+    }
+
+    public void writeFCGInDotRepresentation()
+    {
+        // Write the function call graph
+        try
+        {
+            createOutputDirectory(outputDir);
+
+            String filename = outputDir + File.separator + "fcg.dot";
+            FileWriter fwriter = new FileWriter(filename);
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+
+            List<String> fcgNodes = new LinkedList<String>();
+            List<String> fcgEdges = new LinkedList<String>();
+
+            for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
+            {
+                String name = entry.getKey();
+                ISAFunction func = entry.getValue();
+
+                // Add the function to the list of nodes
+                String attrs = "";
+                if (entryFunction.equals(name))
+                {
+                    attrs = ",fillcolor=red";
+                }
+                String node = String.format("%s [label=\"%s\"%s]",
+                                            name,
+                                            name,
+                                            attrs);
+                fcgNodes.add(node);
+
+                for (String callee : func.getFunctionCallDependencies())
+                {
+                    String edge = String.format("%s -> %s", name, callee);
+                    fcgEdges.add(edge);
+                }
+            }
+
+            String nodes = String.join(";\n        ", fcgNodes);
+            nodes = "        " + nodes + ";\n\n";
+            String edges = String.join(";\n        ", fcgEdges);
+            if (edges.length() > 0)
+            {
+                edges = "        " + edges + ";\n";
+            }
+            String dot = String.format(DOT_TOP_LEVEL, nodes, edges);
+            bwriter.write(dot);
+            bwriter.close();
+        }
+        catch(IOException ioe)
+        {
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
         }
     }
 }

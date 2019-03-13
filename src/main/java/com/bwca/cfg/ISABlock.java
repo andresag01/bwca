@@ -22,6 +22,8 @@ public class ISABlock
     private int dfsPosition;
     private int loopDepth;
 
+    private List<FunctionCallDetails> funcCalls;
+
     public ISABlock(long startAddress, int id)
     {
         this.startAddress = startAddress;
@@ -35,6 +37,8 @@ public class ISABlock
         this.innerLoopHeader = null;
         this.dfsPosition = 0;
         this.loopDepth = 0;
+
+        funcCalls = new LinkedList<FunctionCallDetails>();
     }
 
     public ArrayList<ISALine> getInstructions()
@@ -162,6 +166,49 @@ public class ISABlock
         {
             model.addEdgeCost(this, edge);
         }
+    }
+
+    public void buildFunctionCallDependencyList()
+    {
+        FunctionCallDetails call;
+        String calleeName;
+        long calleeAddr;
+
+        for (ISALine inst : insts)
+        {
+            calleeName = inst.getTargetFunction();
+
+            if (calleeName == null)
+            {
+                continue;
+            }
+            else if (inst.getType() == InstructionType.BRANCH ||
+                     inst.getType() == InstructionType.COND_BRANCH)
+            {
+                // This is handled via the dummy block, so skip it
+                // TODO: I cannot remember what this is about...
+                continue;
+            }
+
+            if (inst.getType() != InstructionType.BRANCH_LINK &&
+                inst.getType() != InstructionType.OTHER &&
+                inst.getInstruction() == Instruction.FUNC_CALL)
+            {
+                System.out.println("Instruction has function call but is of "
+                                   + "unexpected type");
+                System.exit(1);
+            }
+
+            calleeAddr = inst.getTargetFunctionAddress();
+
+            call = new FunctionCallDetails(calleeName, calleeAddr, inst);
+            funcCalls.add(call);
+        }
+    }
+
+    public List<FunctionCallDetails> getFunctionCallDependencies()
+    {
+        return funcCalls;
     }
 
     public void nodesToString(ArrayList<String> output,

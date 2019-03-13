@@ -41,6 +41,7 @@ public class Controller
     private Set<String> selectedModels;
     private List<Model> models;
     private CFGConfiguration cfgConfig;
+    private String entryFunctionName;
     private String mallocFunctionName;
     private String callocFunctionName;
     private String reallocFunctionName;
@@ -58,6 +59,7 @@ public class Controller
         + "    -h       Prints this help message\n"
         + "    -l       Print a list of options for -m\n"
         + "    -w       Fetch width in bytes. Default: 4\n"
+        + "    -e       Entry function\n"
         + "    -m       Analyze the binary file with the specified model.\n"
         + "             Repeat this option as many times as needed to apply \n"
         + "             more than one model. Run the program with -l to view\n"
@@ -83,6 +85,7 @@ public class Controller
         models = new LinkedList<Model>();
         fetchWidthBytes = 4;
         cfgConfig = new CFGConfiguration();
+        entryFunctionName = null;
         mallocFunctionName = "malloc";
         callocFunctionName = "calloc";
         reallocFunctionName = "realloc";
@@ -158,6 +161,15 @@ public class Controller
                     configFile = args[++i];
                     break;
 
+                case "-e":
+                    if (i + 1 == args.length)
+                    {
+                        System.out.println("-e option takes one argument");
+                        System.exit(1);
+                    }
+                    entryFunctionName = args[++i];
+                    break;
+
                 case "-malloc":
                     if (i + 1 == args.length)
                     {
@@ -209,6 +221,11 @@ public class Controller
         {
             fail = true;
             System.out.println("Must select at least one model");
+        }
+        if (entryFunctionName == null)
+        {
+            fail = true;
+            System.out.println("Missing entry function");
         }
         for (String modelOption : selectedModels)
         {
@@ -333,26 +350,39 @@ public class Controller
         }
 
         System.out.println("Generating CFG");
-        ISAModule module = new ISAModule(outputDir, cfgConfig);
+        ISAModule module = new ISAModule(outputDir,
+                                         entryFunctionName,
+                                         cfgConfig);
         if (module.parseFunctions(readelf, objdump) != 0)
         {
-            module.writeDotRepresentation(null);
+            module.writeCFGInDotRepresentation(null);
+            module.writeFCGInDotRepresentation();
             module.printMissingInfoMessages();
+            System.exit(1);
+        }
+        else if (module.hasRecursiveFunctionCalls())
+        {
+            module.writeCFGInDotRepresentation(null);
+            module.writeFCGInDotRepresentation();
+            System.out.println("The program is recursive!");
             System.exit(1);
         }
 
         System.out.println("Analyzing CFG");
         module.analyzeCFG();
 
-        for (Model model : models)
-        {
-            System.out.println("Applying model " + model.getName());
-            module.applyModel(model);
+        module.writeCFGInDotRepresentation(null);
+        module.writeFCGInDotRepresentation();
 
-            System.out.println("    - Writing .dot file");
-            module.writeDotRepresentation(model);
-            System.out.println("    - Writing .lp file");
-            module.writeILP(model);
-        }
+        //for (Model model : models)
+        //{
+        //    System.out.println("Applying model " + model.getName());
+        //    module.applyModel(model);
+
+        //    System.out.println("    - Writing .dot file");
+        //    module.writeDotRepresentation(model);
+        //    System.out.println("    - Writing .lp file");
+        //    module.writeILP(model);
+        //}
     }
 }

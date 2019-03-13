@@ -27,7 +27,7 @@ public class ISAFunction
                                                 + "<(?<name>[^>]+)>:$");
     static final String DOT_TOP_LEVEL = "digraph G {\n"
         + "    subgraph cluster_cfg {\n"
-        + "        color=white;\n"
+        + "        color = white;\n"
         + "        node [shape=box,style=filled,fillcolor=yellow];\n"
         + "        label = \"Function: %s()\";\n"
         + "        labelloc = \"t\";\n"
@@ -112,6 +112,11 @@ public class ISAFunction
         this.config = config;
         this.nextBlockId = 0;
         this.nextEdgeId = 0;
+    }
+
+    public String getName()
+    {
+        return name;
     }
 
     public LinkedList<String> getMissingInfoMessages()
@@ -692,6 +697,30 @@ public class ISAFunction
         {
             block.applyModel(model);
         }
+    }
+
+    public void buildFunctionCallDependencyList()
+    {
+        for (ISABlock block : blocks)
+        {
+            block.buildFunctionCallDependencyList();
+        }
+    }
+
+    public Set<String> getFunctionCallDependencies()
+    {
+        Set<String> deps = new HashSet<String>();
+
+        for (ISABlock block : blocks)
+        {
+            for (FunctionCallDetails call :
+                 block.getFunctionCallDependencies())
+            {
+                deps.add(call.getCalleeName());
+            }
+        }
+
+        return deps;
     }
 
     private class FunctionCallInformation
