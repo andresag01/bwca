@@ -350,9 +350,8 @@ public class Controller
         }
 
         System.out.println("Generating CFG");
-        ISAModule module = new ISAModule(outputDir,
-                                         entryFunctionName,
-                                         cfgConfig);
+        ISAModule module =
+            new ISAModule(outputDir, entryFunctionName, cfgConfig);
         if (module.parseFunctions(readelf, objdump) != 0)
         {
             module.writeCFGInDotRepresentation(null);

@@ -124,7 +124,7 @@ public class ISAFunction
         return infoMsgs;
     }
 
-    public int parseInstructions(ArrayList<String> objdump)
+    private int findStartOfFunctionInObjdump(ArrayList<String> objdump)
     {
         boolean foundFunc = false;
         int funcIndex;
@@ -200,8 +200,16 @@ public class ISAFunction
             System.exit(1);
         }
 
-        // Parse the instructions
+        return funcIndex;
+    }
+
+    private ArrayList<ISALine> extractInstructionsFromObjdump(
+        ArrayList<String> objdump,
+        int funcIndex)
+    {
         ArrayList<ISALine> insts = new ArrayList<ISALine>();
+
+        // Parse the instructions
         for (funcIndex = funcIndex + 1; funcIndex < objdump.size();
              funcIndex++)
         {
@@ -229,10 +237,15 @@ public class ISAFunction
             infoMsgs.addAll(line.getMissingInfoMessages());
         }
 
+        return insts;
+    }
+
+    private void extractBranchDestinationAddresses(
+        ArrayList<ISALine> insts,
+        Set<Long> branchTargetAddrs,
+        Map<Long, String> outOfFuncBranchTargetAddrs)
+    {
         // Extract target addresses
-        Set<Long> branchTargetAddrs = new HashSet<Long>();
-        Map<Long, String> outOfFuncBranchTargetAddrs =
-            new HashMap<Long, String>();
         for (ISALine inst : insts)
         {
             if (inst.getType() == InstructionType.BRANCH ||
@@ -262,11 +275,17 @@ public class ISAFunction
                 }
             }
         }
+    }
 
+    private Map<Long, ISABlock> groupInstructionsInBlocks(
+        ArrayList<ISALine> insts,
+        Set<Long> branchTargetAddrs)
+    {
         // Create the blocks of the CFG
         blocks = new ArrayList<ISABlock>();
-        HashMap<Long, ISABlock> blocksMap = new HashMap<Long, ISABlock>();
+        Map<Long, ISABlock> blocksMap = new HashMap<Long, ISABlock>();
         ISABlock cur = null;
+
         for (ISALine inst : insts)
         {
             // Inspect the instruction and do the following:
@@ -312,6 +331,13 @@ public class ISAFunction
             System.exit(1);
         }
 
+        return blocksMap;
+    }
+
+    private void addExternalBranchTargetBlocks(
+        Map<Long, String> outOfFuncBranchTargetAddrs,
+        Map<Long, ISABlock> blocksMap)
+    {
         // Create dummy blocks for the target addresses that are outside the
         // function
         for (Map.Entry<Long, String> entry :
@@ -332,9 +358,10 @@ public class ISAFunction
                                            Instruction.FUNC_CALL,
                                            InstructionType.OTHER));
         }
+    }
 
-        entry = blocks.get(0);
-
+    private void createEdges(Map<Long, ISABlock> blocksMap)
+    {
         // Create the edges of the CFG
         for (int i = 0; i < blocks.size(); i++)
         {
@@ -432,7 +459,10 @@ public class ISAFunction
                 blocks.get(i).setExit(true);
             }
         }
+    }
 
+    private void addExitBlock()
+    {
         // Create a dummy block to consolidate all exit points into a single
         // one. Otherwise lp_solve cannot deal with the problem
         ISABlock dummyBlock = new ISABlock(0, nextBlockId++);
@@ -475,6 +505,29 @@ public class ISAFunction
         {
             infoMsgs.add("No exit block");
         }
+    }
+
+    public int parseInstructions(ArrayList<String> objdump)
+    {
+        int funcIndex;
+        ArrayList<ISALine> insts;
+        Set<Long> branchTargetAddrs;
+        Map<Long, String> outOfFuncBranchTargetAddrs;
+        Map<Long, ISABlock> blocksMap;
+
+        funcIndex = findStartOfFunctionInObjdump(objdump);
+        insts = extractInstructionsFromObjdump(objdump, funcIndex);
+        branchTargetAddrs = new HashSet<Long>();
+        outOfFuncBranchTargetAddrs = new HashMap<Long, String>();
+        extractBranchDestinationAddresses(
+            insts, branchTargetAddrs, outOfFuncBranchTargetAddrs);
+        blocksMap = groupInstructionsInBlocks(insts, branchTargetAddrs);
+        addExternalBranchTargetBlocks(outOfFuncBranchTargetAddrs, blocksMap);
+
+        entry = blocks.get(0);
+
+        createEdges(blocksMap);
+        addExitBlock();
 
         if (infoMsgs.size() != 0)
         {

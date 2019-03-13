@@ -68,10 +68,10 @@ public class ISAModule
     }
 
     private Map<String, SymbolTableRecord> parseSymbolTable(
-                                                    List<String> readelf)
+        List<String> readelf)
     {
         Map<String, SymbolTableRecord> symbolTable =
-                                    new HashMap<String, SymbolTableRecord>();
+            new HashMap<String, SymbolTableRecord>();
         String name;
         long size;
         long addr;
@@ -126,9 +126,9 @@ public class ISAModule
         if (symbol == null)
         {
             System.out.printf("Function %s required by %s is not listed in "
-                               + "symbol table!\n",
-                               name,
-                               (parent == null) ? "entry point" : parent);
+                                  + "symbol table!\n",
+                              name,
+                              (parent == null) ? "entry point" : parent);
             System.exit(1);
         }
 
@@ -152,7 +152,8 @@ public class ISAModule
         if (funcMap.put(name, func) != null)
         {
             System.out.printf("Function %s found more than once in symbol "
-                              + "table\n", name);
+                                  + "table\n",
+                              name);
             System.exit(1);
         }
 
@@ -164,18 +165,17 @@ public class ISAModule
         {
             if (funcMap.get(dependencyName) == null)
             {
-                ret = (parseFunction(dependencyName,
-                                     name,
-                                     symbolTable,
-                                     objdump) != 0) ? -1 : ret;
+                ret = (parseFunction(
+                           dependencyName, name, symbolTable, objdump) != 0) ?
+                    -1 :
+                    ret;
             }
         }
 
         return ret;
     }
 
-    public int parseFunctions(List<String> readelf,
-                              ArrayList<String> objdump)
+    public int parseFunctions(List<String> readelf, ArrayList<String> objdump)
     {
         // Parse the symbol table into a data structure that we can easily
         // look up function names on
@@ -319,10 +319,8 @@ public class ISAModule
                 {
                     attrs = ",fillcolor=red";
                 }
-                String node = String.format("%s [label=\"%s\"%s]",
-                                            name,
-                                            name,
-                                            attrs);
+                String node =
+                    String.format("%s [label=\"%s\"%s]", name, name, attrs);
                 fcgNodes.add(node);
 
                 for (String callee : func.getFunctionCallDependencies())
@@ -343,7 +341,7 @@ public class ISAModule
             bwriter.write(dot);
             bwriter.close();
         }
-        catch(IOException ioe)
+        catch (IOException ioe)
         {
             ioe.printStackTrace();
             System.out.println(ioe);
