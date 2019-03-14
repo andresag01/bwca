@@ -52,7 +52,7 @@ public class ISAFunction
         + "                    <td align=\"left\">Loop Header</td>\n"
         + "                    <td bgcolor=\"red\">    </td>\n"
         + "                </tr>\n"
-        + "            </table>>]\n"
+        + "            </table>>];\n"
         + "%s"
         + "%s"
         + "    }\n"
@@ -701,7 +701,9 @@ public class ISAFunction
                     {
                         // Case E: Reentry...
                         // The loop is irreducible
-                        System.out.println("There is an irreducible loop!");
+                        System.out.printf("Function %s has an irreducible " +
+                                          "loop!",
+                                          name);
                         System.exit(1);
                     }
                 }

@@ -39,6 +39,24 @@ public class ISAModule
         + "        node [shape=box,style=filled,fillcolor=yellow];\n"
         + "        label = \"Function Call Graph\";\n"
         + "        labelloc = \"t\";\n"
+        + "        legend [fillcolor=lightgrey,label=<<table "
+        + "                                            border=\"0\""
+        + "                                            cellpadding=\"4\""
+        + "                                            cellspacing=\"6\""
+        + "                                            cellborder=\"0\">\n"
+        + "                <tr>\n"
+        + "                    <td colspan=\"2\""
+        + "                        align=\"center\">Legend</td>\n"
+        + "                </tr>\n"
+        + "                <tr>\n"
+        + "                    <td align=\"left\">Entry Function</td>\n"
+        + "                    <td bgcolor=\"red\">    </td>\n"
+        + "                </tr>\n"
+        + "                <tr>\n"
+        + "                    <td align=\"left\">Regular Function</td>\n"
+        + "                    <td bgcolor=\"yellow\">    </td>\n"
+        + "                </tr>\n"
+        + "            </table>>];\n"
         + "%s"
         + "%s"
         + "    }\n"
@@ -331,7 +349,7 @@ public class ISAModule
             }
 
             String nodes = String.join(";\n        ", fcgNodes);
-            nodes = "        " + nodes + ";\n\n";
+            nodes = "        " + nodes + ";\n";
             String edges = String.join(";\n        ", fcgEdges);
             if (edges.length() > 0)
             {
