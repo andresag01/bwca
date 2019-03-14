@@ -95,7 +95,7 @@ public class ISAFunction
     private String name;
     private ISABlock entry;
     private ArrayList<ISABlock> blocks;
-    private LinkedList<String> infoMsgs;
+    private Set<String> infoMsgs;
     private CFGConfiguration config;
 
     private int nextEdgeId;
@@ -111,7 +111,7 @@ public class ISAFunction
         this.size = size;
         this.name = name;
         this.entry = null;
-        this.infoMsgs = new LinkedList<String>();
+        this.infoMsgs = new HashSet<String>();
         this.blocks = new ArrayList<ISABlock>();
         this.config = config;
         this.nextBlockId = 0;
@@ -124,7 +124,7 @@ public class ISAFunction
         this.size = size;
         this.name = name;
         this.entry = null;
-        this.infoMsgs = new LinkedList<String>();
+        this.infoMsgs = new HashSet<String>();
         this.blocks = new ArrayList<ISABlock>();
         this.config = config;
         this.nextBlockId = 0;
@@ -779,6 +779,48 @@ public class ISAFunction
         return solution;
     }
 
+    public void checkMissingInformation(FunctionCallDetails call)
+    {
+        System.out.println("Checking function " + name);
+        for (ISABlock block : blocks)
+        {
+            for (BranchTarget edge : block.getEdges())
+            {
+                ISABlock successor = edge.getBlock();
+                long successorAddress = successor.getFirstLine().getAddress();
+
+                if (!successor.isLoopHeader())
+                {
+                    continue;
+                }
+                else if (block.getInnerLoopHeader() == successor)
+                {
+                    continue;
+                }
+                else if (block == successor)
+                {
+                    continue;
+                }
+
+                // This successor is the header of a loop and needs a bound
+                ISALine inst = block.getFirstLine();
+
+                // Check if we have information about this bound in the config
+                LoopBound bound = config.getLoopBounds(call.getCallAddress(),
+                                                       successorAddress);
+                if (bound == null)
+                {
+                    String msg = String.format("loopbound 0x%08x min <BOUND> "
+                                               + "max <BOUND> from call "
+                                               + "0x%08x",
+                                               successorAddress,
+                                               call.getCallAddress());
+                    infoMsgs.add(msg);
+                }
+            }
+        }
+    }
+
     private void writeILP(String filename,
                           Model model,
                           FunctionCallDetails call)
@@ -897,6 +939,7 @@ public class ISAFunction
             for (BranchTarget edge : block.getEdges())
             {
                 ISABlock successor = edge.getBlock();
+                long successorAddress = successor.getFirstLine().getAddress();
 
                 if (!successor.isLoopHeader())
                 {
@@ -916,20 +959,17 @@ public class ISAFunction
                 String lbound = "BOUND";
                 String ubound = "BOUND";
 
-                // Check if we have information about this bound in the
-                // config
-                Map<Long, LoopBound> loops = config.getLoopBounds();
-
-                if (loops.containsKey(inst.getAddress()))
+                // Check if we have information about this bound in the config
+                LoopBound bound = config.getLoopBounds(call.getCallAddress(),
+                                                       successorAddress);
+                if (bound != null)
                 {
-                    LoopBound bound = loops.get(inst.getAddress());
                     lbound = Long.toString(bound.getLowerBound());
                     ubound = Long.toString(bound.getUpperBound());
                 }
                 else
                 {
-                    System.out.printf("No information about loop at "
-                                          + "0x%08x\n",
+                    System.out.printf("No information about loop at 0x%08x\n",
                                       inst.getAddress());
                 }
 

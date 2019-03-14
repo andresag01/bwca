@@ -26,23 +26,23 @@ public class CFGConfiguration
                         + "\\s+min"
                         + "\\s+(?<min>\\d+)"
                         + "\\s+max"
-                        + "\\s+(?<max>\\d+)$");
+                        + "\\s+(?<max>\\d+)"
+                        + "\\s+from\\s+call\\s+"
+                        + "(?<call>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
     static final Pattern CMD_FUNC_CALL = Pattern.compile("^call\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>[a-zA-Z_]\\w*)$");
 
     private Map<Long, BranchTarget> branchTargets;
     private Map<String, Long> funcs;
-    private Map<Long, LoopBound> loops;
-    private Map<Long, Long> allocs;
+    private Map<Long, Map<Long, LoopBound>> loops;
     private Map<Long, String> functionCalls;
 
     public CFGConfiguration()
     {
         branchTargets = new HashMap<Long, BranchTarget>();
         funcs = new HashMap<String, Long>();
-        loops = new HashMap<Long, LoopBound>();
-        allocs = new HashMap<Long, Long>();
+        loops = new HashMap<Long, Map<Long, LoopBound>>();
         functionCalls = new HashMap<Long, String>();
     }
 
@@ -56,14 +56,10 @@ public class CFGConfiguration
         return funcs;
     }
 
-    public Map<Long, LoopBound> getLoopBounds()
+    public LoopBound getLoopBounds(long callAddress, long loopAddress)
     {
-        return loops;
-    }
-
-    public Map<Long, Long> getAllocationSizes()
-    {
-        return allocs;
+        Map<Long, LoopBound> map = loops.get(callAddress);
+        return (map == null) ? null : map.get(loopAddress);
     }
 
     public Long getBranchDestination(long address)
@@ -118,7 +114,18 @@ public class CFGConfiguration
                     long address = strToLong(match.group("address"));
                     long lbound = strToLong(match.group("min"));
                     long ubound = strToLong(match.group("max"));
-                    loops.put(address, new LoopBound(lbound, ubound));
+                    long callAddress = strToLong(match.group("call"));
+                    Map<Long, LoopBound> map;
+                    if (!loops.containsKey(callAddress))
+                    {
+                        map = new HashMap<Long, LoopBound>();
+                        loops.put(callAddress, map);
+                    }
+                    else
+                    {
+                        map = loops.get(callAddress);
+                    }
+                    map.put(address, new LoopBound(lbound, ubound));
                     continue;
                 }
 
@@ -184,6 +191,21 @@ public class CFGConfiguration
 
     public void print()
     {
+        System.out.println("Loop bounds:");
+        for (Map.Entry<Long, Map<Long, LoopBound>> entry : loops.entrySet())
+        {
+            System.out.printf("    0x%08x:\n", entry.getKey());
+
+            Map<Long, LoopBound> boundMap = entry.getValue();
+            for (Map.Entry<Long, LoopBound> lentry : boundMap.entrySet())
+            {
+                System.out.printf("        0x%08x [%d, %d]\n",
+                                  lentry.getKey(),
+                                  lentry.getValue().getLowerBound(),
+                                  lentry.getValue().getUpperBound());
+            }
+        }
+
         System.out.println("Branch targets:");
         for (Map.Entry<Long, BranchTarget> entry : branchTargets.entrySet())
         {
@@ -197,13 +219,6 @@ public class CFGConfiguration
         {
             System.out.printf(
                 "    %s: %d\n", entry.getKey(), entry.getValue());
-        }
-
-        System.out.println("Allocation sizes:");
-        for (Map.Entry<Long, Long> entry : allocs.entrySet())
-        {
-            System.out.printf(
-                "    0x%08x: %d\n", entry.getKey(), entry.getValue());
         }
     }
 }
