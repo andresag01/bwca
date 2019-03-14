@@ -1,5 +1,6 @@
 package com.bwca.cfg;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
@@ -11,11 +12,13 @@ import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.BufferedWriter;
 import java.io.IOException;
 
 import com.bwca.models.Model;
+import com.bwca.utils.PlatformUtils;
 
 public class ISAFunction
 {
@@ -25,6 +28,9 @@ public class ISAFunction
                         + "\\s+(?<opcode>\\w+)(\\.n)?(?<body>.*)$");
     static final Pattern FUNC = Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+"
                                                 + "<(?<name>[^>]+)>:$");
+    static final Pattern LP_SOLVE_SOLUTION =
+        Pattern.compile("^Value of objective function:\\s+"
+                        + "(?<solution>[0-9]+(\\.[0-9]+)?)$");
     static final String DOT_TOP_LEVEL = "digraph G {\n"
         + "    subgraph cluster_cfg {\n"
         + "        color = white;\n"
@@ -57,23 +63,32 @@ public class ISAFunction
         + "%s"
         + "    }\n"
         + "}";
-    static final String ILP_TOP_LEVEL = "/* ILP for function %s */\n\n"
-        + "/* Problem */\n"
-        + "max: %s;\n\n"
-        + "/* Block weights */\n"
-        + "%s\n"
-        + "/* Function call weights */\n"
-        + "%s\n"
+    static final String ILP_TOP_LEVEL = "/*\n"
+        + " ILP for:\n"
+        + " *     - Function: %s@0x%08x\n"
+        + " *     - Cost model: %s\n"
+        + " */\n\n"
+        + "/* Objective function */\n"
+        + "%s: %s;\n\n"
         + "/* Output constraints */\n"
         + "%s\n"
         + "/* Input constraints */\n"
         + "%s\n"
         + "/* Loop constraints */\n"
         + "%s\n"
+        + "/* Detailed block costs\n"
+        + " *\n"
+        + "%s*/\n\n"
         + "/* Block variable declarations */\n"
         + "%s\n"
         + "/* Edge variable declarations */\n"
         + "%s";
+
+    static final String ILP_PROBLEM_FILE_EXT = ".lp";
+    static final String ILP_SOLUTION_FILE_EXT = ".sol";
+
+    static final String LP_SOLVE = "lp_solve";
+    static final String[] LP_SOLVE_CMD = {LP_SOLVE};
 
     private Long address;
     private long size;
@@ -746,11 +761,313 @@ public class ISAFunction
         cur1.setInnerLoopHeader(cur2);
     }
 
-    public void applyModel(Model model)
+    public void applyModel(String outputDir,
+                           Model model,
+                           FunctionCallDetails call)
     {
+        String baseFilename;
+        String lpFile;
+        String solFile;
+        String solution;
+
+        baseFilename = String.format("%s%s%s@0x%08x",
+                                     outputDir,
+                                     File.separator,
+                                     model.getName(),
+                                     call.getCallAddress());
+        lpFile = baseFilename + ILP_PROBLEM_FILE_EXT;
+        solFile = baseFilename + ILP_SOLUTION_FILE_EXT;
+
         for (ISABlock block : blocks)
         {
+            // Add the cost of the blocks and edges
             block.applyModel(model);
+
+            // Add the cost of the function calls this block makes
+            for (FunctionCallDetails dep :
+                 block.getFunctionCallDependencies())
+            {
+                model.addFunctionCallCost(block, dep);
+            }
+        }
+
+        // Generate and solve the ILP for the function
+        writeILP(lpFile, model, call);
+        solution = solveILP(lpFile, solFile);
+
+        // Add the solution for this function call for later use
+        model.addFunctionCallDetailsCost(call, solution);
+    }
+
+    private String solveILP(String lpFile, String solFile)
+    {
+        ArrayList<String> output = null;
+        File outputLpSolveFile;
+        String[] cmd;
+
+        // Run the lp_solve utility with the program statement as an input
+        try
+        {
+            outputLpSolveFile = new File(solFile);
+            cmd = Arrays.copyOf(LP_SOLVE_CMD, LP_SOLVE_CMD.length + 1);
+            cmd[cmd.length - 1] = lpFile;
+            output = PlatformUtils.runShell(cmd, outputLpSolveFile);
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
+        }
+        catch (InterruptedException ie)
+        {
+            ie.printStackTrace();
+            System.out.println(ie);
+            System.exit(1);
+        }
+
+        // Parse the lp_solve output to get the result
+        String solution = null;
+        for (String line : output)
+        {
+            Matcher match = LP_SOLVE_SOLUTION.matcher(line);
+            if (match.matches())
+            {
+                solution = match.group("solution");
+                break;
+            }
+        }
+
+        if (solution == null)
+        {
+            System.out.println("Solution file " + solFile + "does not "
+                               + "contain solution\n");
+            System.exit(1);
+        }
+
+        return solution;
+    }
+
+    private void writeILP(String filename,
+                          Model model,
+                          FunctionCallDetails call)
+    {
+        StringBuilder outConstraints = new StringBuilder();
+        StringBuilder inConstraints = new StringBuilder();
+        StringBuilder loopConstraints = new StringBuilder();
+        StringBuilder blockDecls = new StringBuilder();
+        StringBuilder edgeDecls = new StringBuilder();
+        StringBuilder blockCosts = new StringBuilder();
+
+        String blockPfix = "b";
+        String edgePfix = "e";
+
+        String ilpFunctionType = model.getObjectiveFunctionType();
+
+        // Make the string for the problem
+        List<String> problem = new LinkedList<String>();
+        for (ISABlock block : blocks)
+        {
+            StringBuilder blockCost = new StringBuilder();
+
+            // Add the block cost to the top level formula
+            blockCost.append(model.getPositiveBlockCost(block) + " " +
+                             blockPfix + block.getId());
+            for (BranchTarget edge : block.getEdges())
+            {
+                String neg = model.getNegativeEdgeCost(edge);
+                if (neg != null)
+                {
+                    blockCost.append(" - " + neg + " " + edgePfix +
+                                     edge.getId());
+                }
+            }
+
+            problem.add(blockCost.toString());
+        }
+        String intercept = model.getInterceptCost();
+        String problemStr = String.join("\n     + ", problem) +
+            ((intercept != null) ? "\n     " + intercept : "");
+
+        // Make the string for the constraints
+        //  - Add an output constraint for every block
+        //  - Construct a table of block -> inEdge
+        //  - Add an input constraint for every block
+        Map<ISABlock, List<String>> inEdges =
+            new HashMap<ISABlock, List<String>>();
+
+        // Output constraints
+        for (ISABlock block : blocks)
+        {
+            outConstraints.append(blockPfix + block.getId() + " = ");
+            if (block.getEdges().size() == 0)
+            {
+                if (block.getLastLine().getInstruction() !=
+                    Instruction.FUNC_EXIT)
+                {
+                    System.out.println("Block " + block.getId() + " has "
+                                       + "no output edges and not an "
+                                       + "exit in function " + name +
+                                       "\n");
+                    System.exit(1);
+                }
+                outConstraints.append("1;\n");
+                continue;
+            }
+
+            List<String> outEdges = new LinkedList<String>();
+            for (BranchTarget edge : block.getEdges())
+            {
+                outEdges.add(edgePfix + edge.getId());
+
+                ISABlock target = edge.getBlock();
+                List<String> inEdgeList = inEdges.get(target);
+                if (inEdgeList == null)
+                {
+                    inEdgeList = new LinkedList<String>();
+                    inEdges.put(target, inEdgeList);
+                }
+                inEdgeList.add(edgePfix + edge.getId());
+            }
+            outConstraints.append(String.join(" + ", outEdges) + ";\n");
+        }
+
+        // Input constraints
+        for (ISABlock block : blocks)
+        {
+            List<String> edges = inEdges.get(block);
+            if (edges == null && block != entry)
+            {
+                System.out.println("Block has no input edges and is not "
+                                   + "entry point");
+                System.exit(1);
+            }
+            else if (edges == null)
+            {
+                // This is the entry block, so there is a chance that it
+                // does not have any in edges. To avoid a null pointer
+                // exception we create a list so that the join() operation
+                // later on works without problems
+                edges = new LinkedList<String>();
+            }
+
+            inConstraints.append(blockPfix + block.getId() + " = ");
+
+            if (block == entry)
+            {
+                edges.add("1");
+            }
+            inConstraints.append(String.join(" + ", edges) + ";\n");
+        }
+
+        // Loop constraints
+        for (ISABlock block : blocks)
+        {
+            for (BranchTarget edge : block.getEdges())
+            {
+                ISABlock successor = edge.getBlock();
+
+                if (!successor.isLoopHeader())
+                {
+                    continue;
+                }
+                else if (block.getInnerLoopHeader() == successor)
+                {
+                    continue;
+                }
+                else if (block == successor)
+                {
+                    continue;
+                }
+
+                // This successor is the header of a loop and needs a bound
+                ISALine inst = block.getFirstLine();
+                String lbound = "BOUND";
+                String ubound = "BOUND";
+
+                // Check if we have information about this bound in the
+                // config
+                Map<Long, LoopBound> loops = config.getLoopBounds();
+
+                if (loops.containsKey(inst.getAddress()))
+                {
+                    LoopBound bound = loops.get(inst.getAddress());
+                    lbound = Long.toString(bound.getLowerBound());
+                    ubound = Long.toString(bound.getUpperBound());
+                }
+                else
+                {
+                    System.out.printf("No information about loop at "
+                                          + "0x%08x\n",
+                                      inst.getAddress());
+                }
+
+                String constraint =
+                    String.format("\n/* Header 0x%08x */\n"
+                                      + "%s %s%d <= %s%d;\n",
+                                  inst.getAddress(),
+                                  lbound,
+                                  blockPfix,
+                                  block.getId(),
+                                  blockPfix,
+                                  successor.getId());
+                loopConstraints.append(constraint);
+
+                constraint = String.format("%s%d <= %s %s%d;\n",
+                                           blockPfix,
+                                           successor.getId(),
+                                           ubound,
+                                           blockPfix,
+                                           block.getId());
+                loopConstraints.append(constraint);
+            }
+        }
+
+        // Block and edge declarations (and block cost breakdown)
+        for (ISABlock block : blocks)
+        {
+            blockDecls.append(
+                String.format("int %s%d;\n", blockPfix, block.getId()));
+
+            if (blockCosts.length() > 0)
+            {
+                blockCosts.append(" *\n");
+            }
+            blockCosts.append(model.getBlockDetails(block));
+
+            for (BranchTarget edge : block.getEdges())
+            {
+                edgeDecls.append(
+                    String.format("int %s%d;\n", edgePfix, edge.getId()));
+            }
+        }
+
+        try
+        {
+            // Write the data in ILP format
+            FileWriter fwriter = new FileWriter(filename);
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+
+            String output = String.format(ILP_TOP_LEVEL,
+                                          name,
+                                          call.getCallAddress(),
+                                          model.getName(),
+                                          ilpFunctionType,
+                                          problemStr,
+                                          outConstraints.toString(),
+                                          inConstraints.toString(),
+                                          loopConstraints.toString(),
+                                          blockCosts.toString(),
+                                          blockDecls.toString(),
+                                          edgeDecls.toString());
+            bwriter.write(output);
+            bwriter.close();
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
         }
     }
 
@@ -762,7 +1079,7 @@ public class ISAFunction
         }
     }
 
-    public Set<String> getFunctionCallDependencies()
+    public Set<String> getFunctionCallDependencyNames()
     {
         Set<String> deps = new HashSet<String>();
 
@@ -778,304 +1095,16 @@ public class ISAFunction
         return deps;
     }
 
-    private class FunctionCallInformation
+    public List<FunctionCallDetails> getFunctionCallDependencies()
     {
-        public int callCount;
-        public long targetAddress;
+        List<FunctionCallDetails> deps = new LinkedList<FunctionCallDetails>();
 
-        public FunctionCallInformation(int callCount, long targetAddress)
+        for (ISABlock block : blocks)
         {
-            this.callCount = callCount;
-            this.targetAddress = targetAddress;
-        }
-    };
-
-    private Map<String, FunctionCallInformation> getFunctionCalls(
-        ISABlock block)
-    {
-        Map<String, FunctionCallInformation> callInfo =
-            new HashMap<String, FunctionCallInformation>();
-        FunctionCallInformation info;
-        String functionName;
-        long functionAddress;
-
-        for (ISALine inst : block.getInstructions())
-        {
-            functionName = inst.getTargetFunction();
-
-            if (functionName == null)
-            {
-                continue;
-            }
-            else if (inst.getType() == InstructionType.BRANCH ||
-                     inst.getType() == InstructionType.COND_BRANCH)
-            {
-                // This is handled via the dummy block, so skip it
-                continue;
-            }
-
-            if (inst.getType() != InstructionType.BRANCH_LINK &&
-                inst.getType() != InstructionType.OTHER &&
-                inst.getInstruction() == Instruction.FUNC_CALL)
-            {
-                System.out.println("Instruction has function call but is of "
-                                   + "unexpected type");
-                System.exit(1);
-            }
-
-            functionAddress = inst.getTargetFunctionAddress();
-
-            if (callInfo.containsKey(functionName))
-            {
-                info = callInfo.get(functionName);
-                info.callCount++;
-            }
-            else
-            {
-                info = new FunctionCallInformation(1, functionAddress);
-                callInfo.put(functionName, info);
-            }
+            deps.addAll(block.getFunctionCallDependencies());
         }
 
-        return callInfo;
-    }
-
-    public void writeILP(String filename, Model model)
-    {
-        try
-        {
-            FileWriter fwriter = new FileWriter(filename);
-            BufferedWriter bwriter = new BufferedWriter(fwriter);
-            StringBuilder outConstraints = new StringBuilder();
-            StringBuilder inConstraints = new StringBuilder();
-            StringBuilder loopConstraints = new StringBuilder();
-            StringBuilder blockWeights = new StringBuilder();
-            StringBuilder functionWeights = new StringBuilder();
-            StringBuilder blockDecls = new StringBuilder();
-            StringBuilder edgeDecls = new StringBuilder();
-            Map<String, FunctionCallInformation> callInfo;
-            Set<String> functionsCalled = new HashSet<String>();
-
-            String blockPfix = model.getName() + "_b";
-            String weightPfix = model.getName() + "_wb";
-            String edgePfix = model.getName() + "_e";
-
-            // Make the string for the problem
-            List<String> problem = new LinkedList<String>();
-            for (ISABlock block : blocks)
-            {
-                StringBuilder blockCost = new StringBuilder();
-                callInfo = getFunctionCalls(block);
-
-                // Add the block cost to the top level formula
-                blockCost.append(weightPfix + block.getId() + " " + blockPfix +
-                                 block.getId());
-                for (BranchTarget edge : block.getEdges())
-                {
-                    String neg = model.getNegativeEdgeCost(edge);
-                    if (neg != null)
-                    {
-                        blockCost.append(" - " + neg + " " + edgePfix +
-                                         edge.getId());
-                    }
-                }
-
-                // Add to the block weight variable
-                blockWeights.append(
-                    String.format("%s%d = %s",
-                                  weightPfix,
-                                  block.getId(),
-                                  model.getPositiveBlockCost(block)));
-                for (Map.Entry<String, FunctionCallInformation> entry :
-                     callInfo.entrySet())
-                {
-                    blockWeights.append(" + ");
-                    blockWeights.append(entry.getKey());
-                    blockWeights.append(" ");
-                    blockWeights.append(entry.getValue().callCount);
-                }
-                blockWeights.append(";\n");
-
-                functionsCalled.addAll(callInfo.keySet());
-                problem.add(blockCost.toString());
-            }
-            String intercept = model.getInterceptCost();
-            String problemStr = String.join("\n     + ", problem) +
-                ((intercept != null) ? "\n     " + intercept : "");
-
-            // Make the string for the constraints
-            //  - Add an output constraint for every block
-            //  - Construct a table of block -> inEdge
-            //  - Add an input constraint for every block
-            Map<ISABlock, List<String>> inEdges =
-                new HashMap<ISABlock, List<String>>();
-
-            // Output constraints
-            for (ISABlock block : blocks)
-            {
-                outConstraints.append(blockPfix + block.getId() + " = ");
-                if (block.getEdges().size() == 0)
-                {
-                    if (block.getLastLine().getInstruction() !=
-                        Instruction.FUNC_EXIT)
-                    {
-                        System.out.println("Block " + block.getId() + " has "
-                                           + "no output edges and not an "
-                                           + "exit in function " + name +
-                                           "\n");
-                        System.exit(1);
-                    }
-                    outConstraints.append("1;\n");
-                    continue;
-                }
-
-                List<String> outEdges = new LinkedList<String>();
-                for (BranchTarget edge : block.getEdges())
-                {
-                    outEdges.add(edgePfix + edge.getId());
-
-                    ISABlock target = edge.getBlock();
-                    List<String> inEdgeList = inEdges.get(target);
-                    if (inEdgeList == null)
-                    {
-                        inEdgeList = new LinkedList<String>();
-                        inEdges.put(target, inEdgeList);
-                    }
-                    inEdgeList.add(edgePfix + edge.getId());
-                }
-                outConstraints.append(String.join(" + ", outEdges) + ";\n");
-            }
-
-            // Input constraints
-            for (ISABlock block : blocks)
-            {
-                List<String> edges = inEdges.get(block);
-                if (edges == null && block != entry)
-                {
-                    System.out.println("Block has no input edges and is not "
-                                       + "entry point");
-                    System.exit(1);
-                }
-                else if (edges == null)
-                {
-                    // This is the entry block, so there is a chance that it
-                    // does not have any in edges. To avoid a null pointer
-                    // exception we create a list so that the join() operation
-                    // later on works without problems
-                    edges = new LinkedList<String>();
-                }
-
-                inConstraints.append(blockPfix + block.getId() + " = ");
-
-                if (block == entry)
-                {
-                    edges.add("1");
-                }
-                inConstraints.append(String.join(" + ", edges) + ";\n");
-            }
-
-            // Loop constraints
-            for (ISABlock block : blocks)
-            {
-                for (BranchTarget edge : block.getEdges())
-                {
-                    ISABlock successor = edge.getBlock();
-
-                    if (!successor.isLoopHeader())
-                    {
-                        continue;
-                    }
-                    else if (block.getInnerLoopHeader() == successor)
-                    {
-                        continue;
-                    }
-                    else if (block == successor)
-                    {
-                        continue;
-                    }
-
-                    // This successor is the header of a loop and needs a bound
-                    ISALine inst = block.getFirstLine();
-                    String lbound = "BOUND";
-                    String ubound = "BOUND";
-
-                    // Check if we have information about this bound in the
-                    // config
-                    Map<Long, LoopBound> loops = config.getLoopBounds();
-
-                    if (loops.containsKey(inst.getAddress()))
-                    {
-                        LoopBound bound = loops.get(inst.getAddress());
-                        lbound = Long.toString(bound.getLowerBound());
-                        ubound = Long.toString(bound.getUpperBound());
-                    }
-                    else
-                    {
-                        System.out.printf("No information about loop at "
-                                              + "0x%08x\n",
-                                          inst.getAddress());
-                    }
-
-                    String constraint =
-                        String.format("\n/* Header 0x%08x */\n"
-                                          + "%s %s%d <= %s%d;\n",
-                                      inst.getAddress(),
-                                      lbound,
-                                      blockPfix,
-                                      block.getId(),
-                                      blockPfix,
-                                      successor.getId());
-                    loopConstraints.append(constraint);
-
-                    constraint = String.format("%s%d <= %s %s%d;\n",
-                                               blockPfix,
-                                               successor.getId(),
-                                               ubound,
-                                               blockPfix,
-                                               block.getId());
-                    loopConstraints.append(constraint);
-                }
-            }
-
-            // Function weights
-            for (String function : functionsCalled)
-            {
-                functionWeights.append(function + " = WEIGHT;\n");
-            }
-
-            // Block and edge declarations
-            for (ISABlock block : blocks)
-            {
-                blockDecls.append(
-                    String.format("int %s%d;\n", blockPfix, block.getId()));
-
-                for (BranchTarget edge : block.getEdges())
-                {
-                    edgeDecls.append(
-                        String.format("int %s%d;\n", edgePfix, edge.getId()));
-                }
-            }
-
-            // Write the data in ILP format
-            String output = String.format(ILP_TOP_LEVEL,
-                                          name,
-                                          problemStr,
-                                          blockWeights.toString(),
-                                          functionWeights.toString(),
-                                          outConstraints.toString(),
-                                          inConstraints.toString(),
-                                          loopConstraints.toString(),
-                                          blockDecls.toString(),
-                                          edgeDecls.toString());
-            bwriter.write(output);
-            bwriter.close();
-        }
-        catch (IOException ioe)
-        {
-            ioe.printStackTrace();
-            System.out.println(ioe);
-            System.exit(1);
-        }
+        return deps;
     }
 
     public void writeDotFile(String filename, Model model)

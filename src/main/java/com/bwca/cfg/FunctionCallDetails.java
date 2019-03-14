@@ -19,4 +19,9 @@ public class FunctionCallDetails
     {
         return calleeName;
     }
+
+    public long getCallAddress()
+    {
+        return (callInst == null) ? 0 : callInst.getAddress();
+    }
 }

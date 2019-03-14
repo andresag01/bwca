@@ -13,10 +13,11 @@ import java.util.List;
 
 import com.bwca.models.Model;
 import com.bwca.models.WCETModel;
-import com.bwca.models.WCAModel;
-import com.bwca.models.WCMAModel;
+//import com.bwca.models.WCAModel;
+//import com.bwca.models.WCMAModel;
 import com.bwca.cfg.ISAModule;
 import com.bwca.cfg.CFGConfiguration;
+import com.bwca.utils.PlatformUtils;
 
 public class Controller
 {
@@ -235,15 +236,15 @@ public class Controller
                     models.add(new WCETModel());
                     break;
 
-                case "wca":
-                    models.add(new WCAModel(mallocFunctionName,
-                                            callocFunctionName,
-                                            reallocFunctionName));
-                    break;
+                //case "wca":
+                //    models.add(new WCAModel(mallocFunctionName,
+                //                            callocFunctionName,
+                //                            reallocFunctionName));
+                //    break;
 
-                case "wcma":
-                    models.add(new WCMAModel(fetchWidthBytes));
-                    break;
+                //case "wcma":
+                //    models.add(new WCMAModel(fetchWidthBytes));
+                //    break;
 
                 default:
                     System.out.println("Unrecognized model " + modelOption);
@@ -262,61 +263,13 @@ public class Controller
         }
     }
 
-    private ArrayList<String> runShell(String[] cmd, File outputFile)
-        throws InterruptedException, IOException
-    {
-        ProcessBuilder procBuilder = new ProcessBuilder(cmd);
-        procBuilder.redirectErrorStream(true);
-        procBuilder.redirectOutput(outputFile);
-        Process p = procBuilder.start();
-        int exitCode = p.waitFor();
-
-        if (exitCode != 0)
-        {
-            System.out.println("Subprocess terminated with error " + exitCode);
-            System.out.println("Errors at " + outputFile.getAbsolutePath());
-            System.exit(1);
-        }
-
-        // Read the output
-        FileReader freader = new FileReader(outputFile);
-        BufferedReader breader = new BufferedReader(freader);
-        ArrayList<String> output = new ArrayList<String>();
-        String line;
-        while ((line = breader.readLine()) != null)
-        {
-            output.add(line);
-        }
-
-        return output;
-    }
-
-    private void createOutputDirectory(String directory)
-    {
-        File dir = new File(directory);
-
-        if (dir.isDirectory())
-        {
-            // The directory already exists, nothing to do
-            return;
-        }
-
-        // Create the directory (and any parent directories that do not exist)
-        if (!dir.mkdirs())
-        {
-            System.out.println("Could not create output directory " +
-                               outputDir);
-            System.exit(1);
-        }
-    }
-
     private void analyze()
     {
         ArrayList<String> objdump = null;
         ArrayList<String> readelf = null;
 
         // Create output directory (if it does not already exist)
-        createOutputDirectory(outputDir);
+        PlatformUtils.createOutputDirectory(outputDir);
 
         // Run objdump and readelf, store output in a file and then read it
         // into memory
@@ -327,14 +280,14 @@ public class Controller
                 new File(outputDir + File.separator + "objdump.log");
             String[] cmd = Arrays.copyOf(OBJDUMP_CMD, OBJDUMP_CMD.length + 1);
             cmd[cmd.length - 1] = binFile;
-            objdump = runShell(cmd, outputObjdumpFile);
+            objdump = PlatformUtils.runShell(cmd, outputObjdumpFile);
 
             System.out.println("Running readelf");
             File outputReadelfFile =
                 new File(outputDir + File.separator + "readelf.log");
             cmd = Arrays.copyOf(READELF_CMD, READELF_CMD.length + 1);
             cmd[cmd.length - 1] = binFile;
-            readelf = runShell(cmd, outputReadelfFile);
+            readelf = PlatformUtils.runShell(cmd, outputReadelfFile);
         }
         catch (IOException ioe)
         {
@@ -370,18 +323,20 @@ public class Controller
         System.out.println("Analyzing CFG");
         module.analyzeCFG();
 
-        module.writeCFGInDotRepresentation(null);
-        module.writeFCGInDotRepresentation();
+        for (Model model : models)
+        {
+            System.out.printf("Applying model '%s' from function '%s'\n",
+                               model.getName(),
+                               entryFunctionName);
+            String solution = module.applyModel(model);
 
-        //for (Model model : models)
-        //{
-        //    System.out.println("Applying model " + model.getName());
-        //    module.applyModel(model);
+            System.out.println("    - Writing CFG .dot file");
+            module.writeCFGInDotRepresentation(model);
 
-        //    System.out.println("    - Writing .dot file");
-        //    module.writeDotRepresentation(model);
-        //    System.out.println("    - Writing .lp file");
-        //    module.writeILP(model);
-        //}
+            System.out.println("    - Writing FCG .dot file");
+            module.writeFCGInDotRepresentation();
+
+            System.out.printf("    - Solution: %s\n", solution);
+        }
     }
 }

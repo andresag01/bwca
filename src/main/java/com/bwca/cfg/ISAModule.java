@@ -15,6 +15,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 
 import com.bwca.models.Model;
+import com.bwca.utils.PlatformUtils;
 
 public class ISAModule
 {
@@ -179,7 +180,7 @@ public class ISAModule
         func.buildFunctionCallDependencyList();
 
         // Parse the given function's dependencies
-        for (String dependencyName : func.getFunctionCallDependencies())
+        for (String dependencyName : func.getFunctionCallDependencyNames())
         {
             if (funcMap.get(dependencyName) == null)
             {
@@ -209,7 +210,7 @@ public class ISAModule
 
         callStack.add(stackTop);
 
-        for (String callee : topFunc.getFunctionCallDependencies())
+        for (String callee : topFunc.getFunctionCallDependencyNames())
         {
             if (callStack.contains(callee))
             {
@@ -245,47 +246,32 @@ public class ISAModule
         return funcMap.get(key);
     }
 
-    public void applyModel(Model model)
+    private void applyModelToFunction(Model model, FunctionCallDetails call)
     {
-        for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
+        ISAFunction func = funcMap.get(call.getCalleeName());
+        String funcDir = outputDir + File.separator + func.getName();
+
+        // Recursive solve the dependencies
+        for (FunctionCallDetails dep : func.getFunctionCallDependencies())
         {
-            ISAFunction func = entry.getValue();
-            func.applyModel(model);
+            applyModelToFunction(model, dep);
         }
+
+        // Create the output directory for the ILP files of this function
+        PlatformUtils.createOutputDirectory(funcDir);
+
+        // Solve for this function
+        func.applyModel(funcDir, model, call);
     }
 
-    private void createOutputDirectory(String directory)
+    public String applyModel(Model model)
     {
-        File dir = new File(directory);
+        FunctionCallDetails call;
 
-        if (dir.isDirectory())
-        {
-            // The directory already exists, nothing to do
-            return;
-        }
+        call = new FunctionCallDetails(entryFunction, 0, null);
+        applyModelToFunction(model, call);
 
-        // Create the directory (and any parent directories that do not exist)
-        if (!dir.mkdirs())
-        {
-            System.out.println("Could not create output directory " +
-                               outputDir);
-            System.exit(1);
-        }
-    }
-
-    public void writeILP(Model model)
-    {
-        for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
-        {
-            String name = entry.getKey();
-            ISAFunction func = entry.getValue();
-            String outDir = outputDir + File.separator + name;
-
-            createOutputDirectory(outDir);
-
-            func.writeILP(outDir + File.separator + model.getName() + ".lp",
-                          model);
-        }
+        return model.getFunctionCallCost(call);
     }
 
     public void writeCFGInDotRepresentation(Model model)
@@ -297,7 +283,7 @@ public class ISAModule
             ISAFunction func = entry.getValue();
             String outDir = outputDir + File.separator + name;
 
-            createOutputDirectory(outDir);
+            PlatformUtils.createOutputDirectory(outDir);
 
             if (model != null)
             {
@@ -317,7 +303,7 @@ public class ISAModule
         // Write the function call graph
         try
         {
-            createOutputDirectory(outputDir);
+            PlatformUtils.createOutputDirectory(outputDir);
 
             String filename = outputDir + File.separator + "fcg.dot";
             FileWriter fwriter = new FileWriter(filename);
@@ -341,7 +327,7 @@ public class ISAModule
                     String.format("%s [label=\"%s\"%s]", name, name, attrs);
                 fcgNodes.add(node);
 
-                for (String callee : func.getFunctionCallDependencies())
+                for (String callee : func.getFunctionCallDependencyNames())
                 {
                     String edge = String.format("%s -> %s", name, callee);
                     fcgEdges.add(edge);

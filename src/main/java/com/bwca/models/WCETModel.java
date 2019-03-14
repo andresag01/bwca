@@ -8,16 +8,19 @@ import com.bwca.cfg.ISABlock;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
+import com.bwca.cfg.FunctionCallDetails;
 
 public class WCETModel extends Model
 {
     private Map<ISABlock, WCETBlockCost> blocks;
     private Map<BranchTarget, WCETEdgeCost> edges;
+    private Map<FunctionCallDetails, Integer> calls;
 
     public WCETModel()
     {
         blocks = new HashMap<ISABlock, WCETBlockCost>();
         edges = new HashMap<BranchTarget, WCETEdgeCost>();
+        calls = new HashMap<FunctionCallDetails, Integer>();
     }
 
     public String getName()
@@ -29,6 +32,25 @@ public class WCETModel extends Model
     {
         WCETBlockCost cost = blocks.get(block);
         return Integer.toString(cost.getPositiveCost());
+    }
+
+    public String getBlockDetails(ISABlock block)
+    {
+        StringBuilder builder = new StringBuilder();
+
+        builder.append(String.format(" * %s%d:\n", "b", block.getId()));
+        builder.append(blocks.get(block).toString());
+
+        for (FunctionCallDetails call : block.getFunctionCallDependencies())
+        {
+            String callDetails = String.format(" *        - %s@0x%08x: %d\n",
+                                               call.getCalleeName(),
+                                               call.getCallAddress(),
+                                               calls.get(call));
+            builder.append(callDetails);
+        }
+
+        return builder.toString();
     }
 
     public String getEdgeSummary(BranchTarget edge)
@@ -51,6 +73,50 @@ public class WCETModel extends Model
     public String getInterceptCost()
     {
         return null;
+    }
+
+    public void addFunctionCallCost(ISABlock block, FunctionCallDetails call)
+    {
+        WCETBlockCost cost = blocks.get(block);
+        Integer callCost = calls.get(call);
+
+        if (cost == null)
+        {
+            System.out.println("Block is not in model when adding function " +
+                               "call cost!");
+            System.exit(1);
+        }
+        if (callCost == null)
+        {
+            System.out.println("Call cost not available in model");
+            System.exit(1);
+        }
+
+        cost.addFunctionCall(callCost);
+    }
+
+    public void addFunctionCallDetailsCost(FunctionCallDetails call,
+                                           String cost)
+    {
+        calls.put(call, Integer.parseInt(cost));
+    }
+
+    public String getObjectiveFunctionType()
+    {
+        return "max";
+    }
+
+    public String getFunctionCallCost(FunctionCallDetails call)
+    {
+        Integer cost = calls.get(call);
+
+        if (cost == null)
+        {
+            System.out.println("Function call not registered with model!\n");
+            System.exit(1);
+        }
+
+        return cost.toString();
     }
 
     public void addLineCost(ISABlock block, ISALine inst)
