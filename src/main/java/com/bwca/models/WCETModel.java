@@ -264,7 +264,6 @@ public class WCETModel extends Model
                 cost.addAlu(1);
                 break;
 
-            case FUNC_CALL:
             case FUNC_EXIT:
                 // These are dummy instructions with no cost
                 break;

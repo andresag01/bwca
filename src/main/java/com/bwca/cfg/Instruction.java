@@ -53,6 +53,5 @@ public enum Instruction {
     CPS,
     /* Undefined instruction. Probably emitted for padding */
     UDF,
-    FUNC_CALL,
     FUNC_EXIT,
 }

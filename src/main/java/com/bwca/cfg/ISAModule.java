@@ -33,6 +33,7 @@ public class ISAModule
     private String outputDir;
     private String entryFunction;
     private CFGConfiguration config;
+    private List<String> infoMsgs;
 
     static final String DOT_TOP_LEVEL = "digraph G {\n"
         + "    subgraph cluster_fcg {\n"
@@ -71,18 +72,68 @@ public class ISAModule
         this.outputDir = outputDir;
         this.config = config;
         this.entryFunction = entryFunction;
+        this.infoMsgs = new LinkedList<String>();
     }
 
-    public void printMissingInfoMessages()
+    public boolean hasMissingInformation()
     {
-        System.out.println("Parsed " + funcMap.size() + " functions");
+        // Traverse all functions and see if we have the information needed to
+        // formulate and solve and ILP
+        // TODO
+
+        if (infoMsgs.size() > 0)
+        {
+            return true;
+        }
+
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
         {
-            System.out.printf("Function %s\n", entry.getKey());
-            for (String msg : entry.getValue().getMissingInfoMessages())
+            List<String> msgs = entry.getValue().getMissingInfoMessages();
+            if (msgs.size() > 0)
             {
-                System.out.printf("    %s\n", msg);
+                return true;
             }
+        }
+
+        return false;
+    }
+
+    public void writeMissingInfoConfig(String outputConfig)
+    {
+        try
+        {
+            // Write the data in ILP format
+            FileWriter fwriter = new FileWriter(outputConfig);
+            BufferedWriter bwriter = new BufferedWriter(fwriter);
+
+            // Top level information (e.g. function sizes)
+            bwriter.write("# Top level\n");
+            bwriter.write(String.join("\n", infoMsgs) + "\n");
+            if (infoMsgs.size() > 0)
+            {
+                bwriter.write("\n");
+            }
+
+            // Function information
+            for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
+            {
+                List<String> msgs = entry.getValue().getMissingInfoMessages();
+                if (msgs.size() < 1)
+                {
+                    continue;
+                }
+
+                bwriter.write("# Function " + entry.getKey());
+                bwriter.write(String.join("\n", msgs) + "\n\n");
+            }
+
+            bwriter.close();
+        }
+        catch (IOException ioe)
+        {
+            ioe.printStackTrace();
+            System.out.println(ioe);
+            System.exit(1);
         }
     }
 
@@ -144,15 +195,16 @@ public class ISAModule
         // Parse the function with the given name
         if (symbol == null)
         {
-            System.out.printf("Function %s required by %s is not listed in "
-                                  + "symbol table!\n",
-                              name,
-                              (parent == null) ? "entry point" : parent);
-            System.exit(1);
+            // Flag that we do not know anything about this function
+            infoMsgs.add(String.format("function %s <size_bytes>", name));
+            size = 0L;
+            addr = 0L;
         }
-
-        size = symbol.getSize();
-        addr = symbol.getAddress();
+        else
+        {
+            size = symbol.getSize();
+            addr = symbol.getAddress();
+        }
 
         if (addr == null)
         {

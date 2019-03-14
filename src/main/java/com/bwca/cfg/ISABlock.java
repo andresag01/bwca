@@ -41,6 +41,18 @@ public class ISABlock
         funcCalls = new LinkedList<FunctionCallDetails>();
     }
 
+    public LinkedList<String> getMissingInfoMessages()
+    {
+        LinkedList<String> msgs = new LinkedList<String>();
+
+        for (ISALine line : insts)
+        {
+            msgs.addAll(line.getMissingInfoMessages());
+        }
+
+        return msgs;
+    }
+
     public ArrayList<ISALine> getInstructions()
     {
         return insts;
@@ -180,23 +192,17 @@ public class ISABlock
 
             if (calleeName == null)
             {
+                // We do not have this information, but the missing data would
+                // have already been recorded earlier. We are doing this just
+                // so that the user can get a nice printout of what information
+                // we are missing to actually complete the analsys
                 continue;
             }
             else if (inst.getType() == InstructionType.BRANCH ||
                      inst.getType() == InstructionType.COND_BRANCH)
             {
-                // This is handled via the dummy block, so skip it
-                // TODO: I cannot remember what this is about...
+                // There are clearly not function calls
                 continue;
-            }
-
-            if (inst.getType() != InstructionType.BRANCH_LINK &&
-                inst.getType() != InstructionType.OTHER &&
-                inst.getInstruction() == Instruction.FUNC_CALL)
-            {
-                System.out.println("Instruction has function call but is of "
-                                   + "unexpected type");
-                System.exit(1);
             }
 
             calleeAddr = inst.getTargetFunctionAddress();
@@ -240,7 +246,10 @@ public class ISABlock
             }
             attrs.add("loopDepth:" + loopDepth);
         }
-        attrs.add("cost:" + ((cost != null) ? cost : ""));
+        if (cost != null)
+        {
+            attrs.add("cost:" + cost);
+        }
 
         if (attrs.size() > 0)
         {

@@ -112,6 +112,7 @@ public class ISAFunction
         this.name = name;
         this.entry = null;
         this.infoMsgs = new LinkedList<String>();
+        this.blocks = new ArrayList<ISABlock>();
         this.config = config;
         this.nextBlockId = 0;
         this.nextEdgeId = 0;
@@ -124,6 +125,7 @@ public class ISAFunction
         this.name = name;
         this.entry = null;
         this.infoMsgs = new LinkedList<String>();
+        this.blocks = new ArrayList<ISABlock>();
         this.config = config;
         this.nextBlockId = 0;
         this.nextEdgeId = 0;
@@ -136,7 +138,16 @@ public class ISAFunction
 
     public LinkedList<String> getMissingInfoMessages()
     {
-        return infoMsgs;
+        LinkedList<String> msgs = new LinkedList<String>();
+
+        for (ISABlock block : blocks)
+        {
+            msgs.addAll(block.getMissingInfoMessages());
+        }
+
+        msgs.addAll(infoMsgs);
+
+        return msgs;
     }
 
     private int findStartOfFunctionInObjdump(ArrayList<String> objdump)
@@ -246,19 +257,21 @@ public class ISAFunction
             }
 
             // Create the instruction
-            ISALine line = new ISALine(address, opcode, body, config);
+            ISALine line = new ISALine(address,
+                                       opcode,
+                                       body,
+                                       config,
+                                       this.address,
+                                       this.size);
             // Check for missing information
             insts.add(line);
-            infoMsgs.addAll(line.getMissingInfoMessages());
         }
 
         return insts;
     }
 
-    private void extractBranchDestinationAddresses(
-        ArrayList<ISALine> insts,
-        Set<Long> branchTargetAddrs,
-        Map<Long, String> outOfFuncBranchTargetAddrs)
+    private void extractBranchDestinationAddresses(ArrayList<ISALine> insts,
+                                                   Set<Long> branchTargetAddrs)
     {
         // Extract target addresses
         for (ISALine inst : insts)
@@ -275,18 +288,6 @@ public class ISAFunction
                         // Add it do the map if the target is in the function
                         branchTargetAddrs.add(destAddress);
                     }
-                    else
-                    {
-                        if (destAddress != inst.getTargetFunctionAddress() ||
-                            inst.getTargetFunction() == null)
-                        {
-                            System.out.println("Unconditional function call "
-                                               + "does not have information");
-                            System.exit(1);
-                        }
-                        outOfFuncBranchTargetAddrs.put(
-                            destAddress, inst.getTargetFunction());
-                    }
                 }
             }
         }
@@ -297,7 +298,6 @@ public class ISAFunction
         Set<Long> branchTargetAddrs)
     {
         // Create the blocks of the CFG
-        blocks = new ArrayList<ISABlock>();
         Map<Long, ISABlock> blocksMap = new HashMap<Long, ISABlock>();
         ISABlock cur = null;
 
@@ -349,34 +349,10 @@ public class ISAFunction
         return blocksMap;
     }
 
-    private void addExternalBranchTargetBlocks(
-        Map<Long, String> outOfFuncBranchTargetAddrs,
-        Map<Long, ISABlock> blocksMap)
+    private void createEdges(Map<Long, ISABlock> blocksMap, ISABlock exitBlock)
     {
-        // Create dummy blocks for the target addresses that are outside the
-        // function
-        for (Map.Entry<Long, String> entry :
-             outOfFuncBranchTargetAddrs.entrySet())
-        {
-            ISABlock dummyBlock = new ISABlock(entry.getKey(), nextBlockId++);
-            blocks.add(dummyBlock);
-            blocksMap.put(entry.getKey(), dummyBlock);
-            dummyBlock.setExit(true);
+        boolean hasExit = false;
 
-            // Add a fake instruction that represents a function call
-            dummyBlock.addLine(new ISALine(entry.getKey(),
-                                           "func_call",
-                                           entry.getValue(),
-                                           true,
-                                           entry.getValue(),
-                                           entry.getKey(),
-                                           Instruction.FUNC_CALL,
-                                           InstructionType.OTHER));
-        }
-    }
-
-    private void createEdges(Map<Long, ISABlock> blocksMap)
-    {
         // Create the edges of the CFG
         for (int i = 0; i < blocks.size(); i++)
         {
@@ -393,70 +369,41 @@ public class ISAFunction
             {
                 case OTHER:
                 case BRANCH_LINK:
-                    if (i + 1 >= blocks.size())
+                    if (inst.getInstruction() == Instruction.FUNC_EXIT)
                     {
-                        // There are no subsequent blocks, this is probably an
-                        // exit block, but at the momment the user has to
-                        // label these manually
-
-                        if (inst.getOpcode().equals("nop"))
-                        {
-                            // This is almost certainly a padding instruction
-                            // that the compiler added for alignment purposes.
-                            // These are generally nops and do not count in the
-                            // CFG. Simply leave this block unconnected to the
-                            // rest of the graph and it will be cleaned up
-                            // later
-                            break;
-                        }
-                        else if (name.equals("success") &&
-                                 inst.getInstruction() == Instruction.BKPT)
-                        {
-                            // This is the "special" success() function that
-                            // terminates in a bkpt instruction and indicates
-                            // success for the simulator
-                            break;
-                        }
-                        else if (inst.getInstruction() == Instruction.UDF)
-                        {
-                            // This is an undefined instruction, so skip over
-                            // it
-                            break;
-                        }
-                        else if (name.equals("abort") &&
-                                 inst.getInstruction() == Instruction.SVC)
-                        {
-                            // This is the "special" abort() function that
-                            // terminates in a bkpt instruction and indicates
-                            // failure for the simulator
-                            break;
-                        }
-                        else if (inst.getInstruction() ==
-                                 Instruction.FUNC_CALL)
-                        {
-                            // This is a special dummy block for unconditional
-                            // branches to functions
-                            break;
-                        }
-
-                        // This situation is rather dodgy because functions
-                        // normally return on a proper branch instruction (to
-                        // the lr register or an appropriate value). At the
-                        // moment we fail
-                        System.out.println("Last block of function '" + name +
-                                           "' terminates in unexpected "
-                                           + "(non-branch) instruction");
-                        System.out.println(blocks.get(i));
-                        System.exit(1);
+                        // This is just a dummy block to consolidate all exists
+                        // into a single point. Otherwise the solver cannot
+                        // handle the ILP
+                        break;
                     }
-
-                    // This is just a regular block that does not manipulate
-                    // the pc, so fall through to the next block
-                    blocks.get(i).addEdge(blocks.get(i + 1));
+                    else if (inst.isExit())
+                    {
+                        // Link this block to the dummy exit block
+                        blocks.get(i).addEdge(exitBlock);
+                    }
+                    else
+                    {
+                        // This is just a regular block that does not
+                        // manipulate the pc, so fall through to the next block
+                        if (blocks.size() == i + 1)
+                        {
+                            System.out.println("Trying to link last block in "
+                                               + "a function with ith + 1 "
+                                               + "block!");
+                            System.exit(1);
+                        }
+                        blocks.get(i).addEdge(blocks.get(i + 1));
+                    }
                     break;
 
                 case BRANCH:
                 case COND_BRANCH:
+                    if (inst.isExit())
+                    {
+                        blocks.get(i).addEdge(exitBlock);
+                        break;
+                    }
+
                     for (BranchTarget target : inst.getBranchTargets())
                     {
                         Long address = target.getAddress();
@@ -472,11 +419,18 @@ public class ISAFunction
             if (inst.isExit())
             {
                 blocks.get(i).setExit(true);
+                hasExit = true;
             }
+        }
+
+        if (!hasExit)
+        {
+            System.out.println("Function does not have exit block!\n");
+            System.exit(1);
         }
     }
 
-    private void addExitBlock()
+    private ISABlock addExitBlock()
     {
         // Create a dummy block to consolidate all exit points into a single
         // one. Otherwise lp_solve cannot deal with the problem
@@ -491,35 +445,9 @@ public class ISAFunction
                                        Instruction.FUNC_EXIT,
                                        InstructionType.OTHER));
         dummyBlock.setEdges(dummyBlock.getLastLine().getBranchTargets());
-
-        boolean hasExit = false;
-        for (int i = 0; i < blocks.size(); i++)
-        {
-            if (!blocks.get(i).isExit())
-            {
-                continue;
-            }
-
-            if (blocks.get(i).getEdges().size() != 0)
-            {
-                System.out.println("Exit block has outgoing edges in "
-                                   + "function " + name);
-                System.exit(1);
-            }
-
-            hasExit = true;
-
-            // Make the exit block point to the single exit point
-            blocks.get(i).addEdge(dummyBlock);
-        }
         blocks.add(dummyBlock);
 
-        // Check that there is at least one exit block and that no exit block
-        // has outgoing edges
-        if (!hasExit)
-        {
-            infoMsgs.add("No exit block");
-        }
+        return dummyBlock;
     }
 
     public int parseInstructions(ArrayList<String> objdump)
@@ -527,27 +455,25 @@ public class ISAFunction
         int funcIndex;
         ArrayList<ISALine> insts;
         Set<Long> branchTargetAddrs;
-        Map<Long, String> outOfFuncBranchTargetAddrs;
         Map<Long, ISABlock> blocksMap;
+        ISABlock exitBlock;
+
+        if (size == 0)
+        {
+            // This is only a place holder block. Do nothing...
+            return 0;
+        }
 
         funcIndex = findStartOfFunctionInObjdump(objdump);
         insts = extractInstructionsFromObjdump(objdump, funcIndex);
         branchTargetAddrs = new HashSet<Long>();
-        outOfFuncBranchTargetAddrs = new HashMap<Long, String>();
-        extractBranchDestinationAddresses(
-            insts, branchTargetAddrs, outOfFuncBranchTargetAddrs);
+        extractBranchDestinationAddresses(insts, branchTargetAddrs);
         blocksMap = groupInstructionsInBlocks(insts, branchTargetAddrs);
-        addExternalBranchTargetBlocks(outOfFuncBranchTargetAddrs, blocksMap);
 
         entry = blocks.get(0);
 
-        createEdges(blocksMap);
-        addExitBlock();
-
-        if (infoMsgs.size() != 0)
-        {
-            return -1;
-        }
+        exitBlock = addExitBlock();
+        createEdges(blocksMap, exitBlock);
 
         return 0;
     }
@@ -613,8 +539,13 @@ public class ISAFunction
 
     public void analyzeCFG()
     {
-        detectLoops();
+        if (blocks.size() == 0)
+        {
+            // This is just a placeholder ISAFunction. Nothing to do...
+            return;
+        }
         garbageCollectBlocks();
+        detectLoops();
         numberEdges();
     }
 

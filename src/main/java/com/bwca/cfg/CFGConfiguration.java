@@ -12,10 +12,6 @@ import java.io.IOException;
 
 public class CFGConfiguration
 {
-    static final Pattern CMD_EXIT =
-        Pattern.compile("^exit\\s+"
-                        + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
-                        + "$");
     static final Pattern CMD_BRANCH =
         Pattern.compile("^branch\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
@@ -31,29 +27,28 @@ public class CFGConfiguration
                         + "\\s+(?<min>\\d+)"
                         + "\\s+max"
                         + "\\s+(?<max>\\d+)$");
-    static final Pattern CMD_ALLOC_BOUND =
-        Pattern.compile("^allocbound\\s+"
-                        + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
-                        + "\\s+(?<size>\\d+)$");
+    static final Pattern CMD_FUNC_CALL = Pattern.compile("^call\\s+"
+                        + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
+                        + "(?<dest>[a-zA-Z_]\\w*)$");
 
     private Map<Long, BranchTarget> branchTargets;
-    private Set<Long> exits;
     private Map<String, Long> funcs;
     private Map<Long, LoopBound> loops;
     private Map<Long, Long> allocs;
+    private Map<Long, String> functionCalls;
 
     public CFGConfiguration()
     {
         branchTargets = new HashMap<Long, BranchTarget>();
-        exits = new HashSet<Long>();
         funcs = new HashMap<String, Long>();
         loops = new HashMap<Long, LoopBound>();
         allocs = new HashMap<Long, Long>();
+        functionCalls = new HashMap<Long, String>();
     }
 
-    public boolean isExit(long address)
+    public String getFunctionCalleeName(long address)
     {
-        return exits.contains(address);
+        return functionCalls.get(address);
     }
 
     public Map<String, Long> getFunctions()
@@ -69,6 +64,12 @@ public class CFGConfiguration
     public Map<Long, Long> getAllocationSizes()
     {
         return allocs;
+    }
+
+    public Long getBranchDestination(long address)
+    {
+        BranchTarget branch = branchTargets.get(address);
+        return (branch == null) ? null : branch.getAddress();
     }
 
     private long strToLong(String str)
@@ -121,15 +122,6 @@ public class CFGConfiguration
                     continue;
                 }
 
-                match = CMD_ALLOC_BOUND.matcher(line);
-                if (match.matches())
-                {
-                    long address = strToLong(match.group("address"));
-                    long size = strToLong(match.group("size"));
-                    allocs.put(address, size);
-                    continue;
-                }
-
                 match = CMD_FUNC.matcher(line);
                 if (match.matches())
                 {
@@ -145,20 +137,35 @@ public class CFGConfiguration
                     continue;
                 }
 
-                match = CMD_EXIT.matcher(line);
-                if (match.matches())
-                {
-                    exits.add(strToLong(match.group("address")));
-                    continue;
-                }
-
                 match = CMD_BRANCH.matcher(line);
                 if (match.matches())
                 {
                     long src = strToLong(match.group("src"));
                     long dest = strToLong(match.group("dest"));
+                    if ((src & 0x1) != 0)
+                    {
+                        System.out.printf("Source address at '%s' is not "
+                                          + "aligned to halfword boundary\n",
+                                          src);
+                        System.exit(1);
+                    }
+                    if ((dest & 0x1) != 0)
+                    {
+                        System.out.printf("Source address at '%s' is not "
+                                          + "aligned to halfword boundary\n",
+                                          dest);
+                        System.exit(1);
+                    }
                     branchTargets.put(src, new BranchTarget(dest, null));
                     continue;
+                }
+
+                match = CMD_FUNC_CALL.matcher(line);
+                if (match.matches())
+                {
+                    long src = strToLong(match.group("src"));
+                    String callee = match.group("name");
+                    functionCalls.put(src, callee);
                 }
 
                 System.out.printf("Invalid command '%s'\n", line);
@@ -177,12 +184,6 @@ public class CFGConfiguration
 
     public void print()
     {
-        System.out.println("Exits:");
-        for (Long exit : exits)
-        {
-            System.out.printf("    0x%08x\n", exit);
-        }
-
         System.out.println("Branch targets:");
         for (Map.Entry<Long, BranchTarget> entry : branchTargets.entrySet())
         {

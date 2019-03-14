@@ -307,12 +307,11 @@ public class Controller
             new ISAModule(outputDir, entryFunctionName, cfgConfig);
         if (module.parseFunctions(readelf, objdump) != 0)
         {
-            module.writeCFGInDotRepresentation(null);
-            module.writeFCGInDotRepresentation();
-            module.printMissingInfoMessages();
+            System.out.println("Failed to parse functions");
             System.exit(1);
         }
-        else if (module.hasRecursiveFunctionCalls())
+
+        if (module.hasRecursiveFunctionCalls())
         {
             module.writeCFGInDotRepresentation(null);
             module.writeFCGInDotRepresentation();
@@ -322,6 +321,19 @@ public class Controller
 
         System.out.println("Analyzing CFG");
         module.analyzeCFG();
+
+        if (module.hasMissingInformation())
+        {
+            String outputConfig = outputDir + File.separator + "config.bwca";
+            System.out.println("The program is missing annotations. Please "
+                               + "fill in the missing information at "
+                               + outputConfig + ", then run the program again "
+                               + "with the -c argument.");
+            module.writeCFGInDotRepresentation(null);
+            module.writeFCGInDotRepresentation();
+            module.writeMissingInfoConfig(outputConfig);
+            System.exit(1);
+        }
 
         for (Model model : models)
         {

@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 public class ISALine
 {
     private long address;
+    private long size;
     private String opcode;
     private String body;
 
@@ -54,7 +55,9 @@ public class ISALine
     public ISALine(long address,
                    String opcode,
                    String body,
-                   CFGConfiguration config)
+                   CFGConfiguration config,
+                   long funcBaseAddress,
+                   long funcSize)
     {
         this.address = address;
         this.opcode = opcode.trim();
@@ -67,7 +70,7 @@ public class ISALine
         this.exit = false;
         this.config = config;
 
-        parseInstruction();
+        parseInstruction(funcBaseAddress, funcSize);
     }
 
     public ISALine(long address,
@@ -90,31 +93,6 @@ public class ISALine
         this.exit = exit;
         this.inst = inst;
         this.type = type;
-    }
-
-    public long getAllocationSize()
-    {
-        if (inst != Instruction.WFI && type != InstructionType.BRANCH_LINK)
-        {
-            System.out.println("Asking allocation size of non wfi or malloc"
-                               + " call");
-            System.exit(1);
-        }
-
-        if (config.getAllocationSizes().containsKey(address))
-        {
-            return config.getAllocationSizes().get(address);
-        }
-        else
-        {
-            /* No information about the allocation */
-            System.out.printf("No information about allocation at 0x%08x "
-                                  + "(%s %s)\n",
-                              address,
-                              opcode,
-                              body);
-            return 1;
-        }
     }
 
     public String toString()
@@ -280,12 +258,46 @@ public class ISALine
         parseBranchTargetAddress(body);
     }
 
-    private void parseInstruction()
+    private void resolveUnconditionalBranch(long funcBaseAddress,
+                                            long funcSize)
     {
-        String infoMsgFmtBrandDst = "0x%08x %s (unknown branch destination)";
+        Long branchDestAddress = config.getBranchDestination(address);
+        boolean isInFunction = isAddressInFunction(funcBaseAddress,
+                                                   funcSize,
+                                                   branchDestAddress);
+
+        if (branchDestAddress == null)
+        {
+            String msg = String.format("branch 0x%08x <dest>", address);
+            infoMsgs.add(msg);
+
+            // Assume is an exit for simplicity
+            exit = true;
+        }
+        else if (isInFunction)
+        {
+            // This is a branch within the function
+            branchTargets.add(new BranchTarget(branchDestAddress, true));
+        }
+        else
+        {
+            // This is an exit branch
+            exit = true;
+        }
+    }
+
+    private boolean isAddressInFunction(long funcBaseAddress,
+                                        long funcSize,
+                                        long address)
+    {
+        return (funcBaseAddress <= address &&
+                address < funcBaseAddress + funcSize);
+    }
+
+    private void parseInstruction(long funcBaseAddress, long funcSize)
+    {
         pred = Predicate.AL;
 
-        exit = config.isExit(address);
 
         Matcher match = B_OPCODE.matcher(opcode);
         if (match.matches())
@@ -471,8 +483,16 @@ public class ISALine
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BLX;
                 // BLX instructions are not tagged with info about the call
-                infoMsgs.add(
-                    String.format(infoMsgFmtBrandDst, address, "blx"));
+                targetFunction = config.getFunctionCalleeName(address);
+                // TODO: We are also supposed to set the targetAddress, but
+                // we currently do not have this information. This information
+                // is very useful for some cost models
+                if (targetFunction == null)
+                {
+                    String msg = String.format("call 0x%08x <callee_name>",
+                                               address);
+                    infoMsgs.add(msg);
+                }
                 break;
 
             case "bl":
@@ -499,11 +519,7 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    if (!exit)
-                    {
-                        infoMsgs.add(
-                            String.format(infoMsgFmtBrandDst, address, "add"));
-                    }
+                    resolveUnconditionalBranch(funcBaseAddress, funcSize);
                 }
                 break;
 
@@ -515,11 +531,7 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    if (!exit)
-                    {
-                        infoMsgs.add(
-                            String.format(infoMsgFmtBrandDst, address, "sub"));
-                    }
+                    resolveUnconditionalBranch(funcBaseAddress, funcSize);
                 }
                 break;
 
@@ -537,11 +549,7 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    if (!exit)
-                    {
-                        infoMsgs.add(
-                            String.format(infoMsgFmtBrandDst, address, "cpy"));
-                    }
+                    resolveUnconditionalBranch(funcBaseAddress, funcSize);
                 }
                 break;
 
@@ -553,11 +561,7 @@ public class ISALine
                 if (destReg == Register.PC)
                 {
                     type = InstructionType.BRANCH;
-                    if (!exit)
-                    {
-                        infoMsgs.add(
-                            String.format(infoMsgFmtBrandDst, address, "mov"));
-                    }
+                    resolveUnconditionalBranch(funcBaseAddress, funcSize);
                 }
                 break;
 
@@ -718,6 +722,16 @@ public class ISALine
                                   opcode,
                                   address);
                 System.exit(1);
+        }
+
+        // Check if this is an exit block because the block is at the end of a
+        // function and it is not a branch
+        if (!isAddressInFunction(funcBaseAddress, funcSize, address + size))
+        {
+            exit = (type == InstructionType.OTHER ||
+                    type == InstructionType.BRANCH_LINK) ?
+                    true :
+                    exit;
         }
     }
 }
