@@ -7,6 +7,7 @@ import com.bwca.cfg.ISALine;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
 import com.bwca.models.ihgc.wca.WCAModelIHGC;
 import com.bwca.models.ihgc.wcma.WCMAModelIHGC;
+import com.bwca.models.ihgc.wcgc.WCGCModelIHGC;
 
 abstract public class Model
 {
@@ -15,6 +16,8 @@ abstract public class Model
         { "wca_ihgc", "Worst-Case Allocation for the IHGC processor" },
         { "wcma_ihgc",
           "Worst-Case Memory Access cycles for the IHGC processor" },
+        { "wcgc_ihgc",
+          "Worst-Case Garbage Collection cycles for the IHGC processor" },
     };
 
     public abstract void addLineCost(ISABlock block, ISALine inst);
@@ -68,6 +71,9 @@ abstract public class Model
 
             case "wcma_ihgc":
                 return new WCMAModelIHGC(fetchWidthBytes);
+
+            case "wcgc_ihgc":
+                return new WCGCModelIHGC(fetchWidthBytes);
 
             default:
                 return null;

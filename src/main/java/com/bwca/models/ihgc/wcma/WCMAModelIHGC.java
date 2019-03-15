@@ -45,7 +45,8 @@ public class WCMAModelIHGC extends Model
     public String getBlockSummary(ISABlock block)
     {
         WCMABlockCostIHGC cost = blocks.get(block);
-        return String.format("f=%.2f,m=%.2f", cost.getFetch(), cost.getMem());
+        return String.format(
+            "[f=%.2f,m=%.2f]", cost.getFetch(), cost.getMem());
     }
 
     public String getBlockDetails(ISABlock block)
