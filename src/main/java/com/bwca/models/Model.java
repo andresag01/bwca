@@ -34,4 +34,16 @@ abstract public class Model
     public abstract String getObjectiveFunctionType();
 
     public abstract String getFunctionCallCost(FunctionCallDetails call);
+
+    public static Model createModel(String modelOption)
+    {
+        switch (modelOption)
+        {
+            case "wcet":
+                return new WCETModel();
+
+            default:
+                return null;
+        }
+    }
 }

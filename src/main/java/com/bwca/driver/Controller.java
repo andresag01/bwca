@@ -12,9 +12,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import com.bwca.models.Model;
-import com.bwca.models.WCETModel;
-//import com.bwca.models.WCAModel;
-//import com.bwca.models.WCMAModel;
 import com.bwca.cfg.ISAModule;
 import com.bwca.cfg.CFGConfiguration;
 import com.bwca.utils.PlatformUtils;
@@ -65,9 +62,6 @@ public class Controller
         + "             Repeat this option as many times as needed to apply \n"
         + "             more than one model. Run the program with -l to view\n"
         + "             a list of options.\n"
-        + "    -malloc  Name of malloc function. Default: malloc\n"
-        + "    -calloc  Name of calloc function. Default: calloc\n"
-        + "    -realloc Name of realloc function. Default: realloc\n"
         + "    -c       CFG Configuration file.\n";
 
     public static void main(String[] args)
@@ -87,9 +81,6 @@ public class Controller
         fetchWidthBytes = 4;
         cfgConfig = new CFGConfiguration();
         entryFunctionName = null;
-        mallocFunctionName = "malloc";
-        callocFunctionName = "calloc";
-        reallocFunctionName = "realloc";
     }
 
     private void parseCmdLineArguments(String[] args)
@@ -171,36 +162,6 @@ public class Controller
                     entryFunctionName = args[++i];
                     break;
 
-                case "-malloc":
-                    if (i + 1 == args.length)
-                    {
-                        System.out.println(
-                            "-malloc option takes one argument");
-                        System.exit(1);
-                    }
-                    mallocFunctionName = args[++i];
-                    break;
-
-                case "-calloc":
-                    if (i + 1 == args.length)
-                    {
-                        System.out.println(
-                            "-calloc option takes one argument");
-                        System.exit(1);
-                    }
-                    callocFunctionName = args[++i];
-                    break;
-
-                case "-realloc":
-                    if (i + 1 == args.length)
-                    {
-                        System.out.println(
-                            "-realloc option takes one argument");
-                        System.exit(1);
-                    }
-                    reallocFunctionName = args[++i];
-                    break;
-
                 default:
                     System.out.println("Unrecognized option " + args[i]);
                     System.exit(1);
@@ -230,27 +191,13 @@ public class Controller
         }
         for (String modelOption : selectedModels)
         {
-            switch (modelOption)
+            Model model = Model.createModel(modelOption);
+            if (model == null)
             {
-                case "wcet":
-                    models.add(new WCETModel());
-                    break;
-
-                //case "wca":
-                //    models.add(new WCAModel(mallocFunctionName,
-                //                            callocFunctionName,
-                //                            reallocFunctionName));
-                //    break;
-
-                //case "wcma":
-                //    models.add(new WCMAModel(fetchWidthBytes));
-                //    break;
-
-                default:
-                    System.out.println("Unrecognized model " + modelOption);
-                    fail = true;
-                    break;
+                System.out.println("Unrecognized model " + modelOption);
+                fail = true;
             }
+            models.add(model);
         }
         if (configFile != null)
         {
