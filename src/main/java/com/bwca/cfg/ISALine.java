@@ -64,6 +64,7 @@ public class ISALine
                    long funcSize)
     {
         this.address = address;
+        this.size = 0;
         this.opcode = opcode.trim();
         this.body = body.trim();
         this.branchTargets = new ArrayList<BranchTarget>();
@@ -88,6 +89,7 @@ public class ISALine
                    InstructionType type)
     {
         this.address = address;
+        this.size = 0;
         this.opcode = opcode.trim();
         this.body = body.trim();
         this.branchTargets = new ArrayList<BranchTarget>();
@@ -318,6 +320,7 @@ public class ISALine
         Matcher match = B_OPCODE.matcher(opcode);
         if (match.matches())
         {
+            size = 2;
             inst = Instruction.B;
             String predStr = match.group("predicate");
             switch ((predStr == null) ? "al" : predStr)
@@ -410,21 +413,25 @@ public class ISALine
             case "sev":
                 type = InstructionType.OTHER;
                 inst = Instruction.SEV;
+                size = 2;
                 break;
 
             case "wfe":
                 type = InstructionType.OTHER;
                 inst = Instruction.WFE;
+                size = 2;
                 break;
 
             case "wfi":
                 type = InstructionType.OTHER;
                 inst = Instruction.WFI;
+                size = 2;
                 break;
 
             case "pop":
                 parseRegisterList(body);
                 inst = Instruction.POP;
+                size = 2;
                 type = InstructionType.OTHER;
                 for (Register reg : regList)
                 {
@@ -441,63 +448,75 @@ public class ISALine
                 parseRegisterListWithBase(body);
                 type = InstructionType.OTHER;
                 inst = Instruction.LDMIA;
+                size = 2;
                 break;
 
             case "push":
                 parseRegisterList(body);
                 type = InstructionType.OTHER;
                 inst = Instruction.PUSH;
+                size = 2;
                 break;
 
             case "stmia":
                 parseRegisterListWithBase(body);
                 type = InstructionType.OTHER;
                 inst = Instruction.STMIA;
+                size = 2;
                 break;
 
             case "ldrb":
                 type = InstructionType.OTHER;
                 inst = Instruction.LDRB;
+                size = 2;
                 break;
 
             case "ldrh":
                 type = InstructionType.OTHER;
                 inst = Instruction.LDRH;
+                size = 2;
                 break;
 
             case "ldrsb":
                 type = InstructionType.OTHER;
                 inst = Instruction.LDRSB;
+                size = 2;
                 break;
 
             case "ldrsh":
                 type = InstructionType.OTHER;
                 inst = Instruction.LDRSH;
+                size = 2;
                 break;
 
             case "ldr":
                 type = InstructionType.OTHER;
                 inst = Instruction.LDR;
+                size = 2;
                 break;
 
             case "strb":
                 type = InstructionType.OTHER;
                 inst = Instruction.STRB;
+                size = 2;
                 break;
 
             case "strh":
                 type = InstructionType.OTHER;
                 inst = Instruction.STRH;
+                size = 2;
                 break;
 
             case "str":
                 type = InstructionType.OTHER;
                 inst = Instruction.STR;
+                size = 2;
                 break;
 
             case "blx":
                 type = InstructionType.BRANCH_LINK;
                 inst = Instruction.BLX;
+                size = 2;
                 // BLX instructions are not tagged with info about the call
                 targetFunction = config.getFunctionCalleeName(address);
                 // TODO: We are also supposed to set the targetAddress, but
@@ -518,11 +537,13 @@ public class ISALine
                 // to identify this condition here and decide whether we are
                 // dealing with a regular branch or a branch with link
                 processBranchLinkInstruction(body);
+                size = 4;
                 break;
 
             case "bx":
                 type = InstructionType.BRANCH;
                 inst = Instruction.BX;
+                size = 2;
                 // Assume this is a "return from function" instruction
                 exit = true;
                 break;
@@ -530,6 +551,7 @@ public class ISALine
             case "add":
             case "adds":
                 inst = Instruction.ADD;
+                size = 2;
                 parse2And3RegisterOperands(body);
                 type = InstructionType.OTHER;
                 if (destReg == Register.PC)
@@ -542,6 +564,7 @@ public class ISALine
             case "sub":
             case "subs":
                 inst = Instruction.SUB;
+                size = 2;
                 parse2And3RegisterOperands(body);
                 type = InstructionType.OTHER;
                 if (destReg == Register.PC)
@@ -555,11 +578,13 @@ public class ISALine
             case "lsls":
                 type = InstructionType.OTHER;
                 inst = Instruction.LSL;
+                size = 2;
                 break;
 
             case "cpy":
             case "cpys":
                 inst = Instruction.CPY;
+                size = 2;
                 parse2And3RegisterOperands(body);
                 type = InstructionType.OTHER;
                 if (destReg == Register.PC)
@@ -572,6 +597,7 @@ public class ISALine
             case "mov":
             case "movs":
                 inst = Instruction.MOV;
+                size = 2;
                 parse2And3RegisterOperands(body);
                 type = InstructionType.OTHER;
                 if (destReg == Register.PC)
@@ -585,127 +611,150 @@ public class ISALine
             case "orrs":
                 type = InstructionType.OTHER;
                 inst = Instruction.ORR;
+                size = 2;
                 break;
 
             case "eor":
             case "eors":
                 type = InstructionType.OTHER;
                 inst = Instruction.EOR;
+                size = 2;
                 break;
 
             case "neg":
             case "negs":
                 type = InstructionType.OTHER;
                 inst = Instruction.NEG;
+                size = 2;
                 break;
 
             case "rev":
                 type = InstructionType.OTHER;
                 inst = Instruction.REV;
+                size = 2;
                 break;
 
             case "rev16":
                 type = InstructionType.OTHER;
                 inst = Instruction.REV16;
+                size = 2;
                 break;
 
             case "revsh":
                 type = InstructionType.OTHER;
                 inst = Instruction.REVSH;
+                size = 2;
                 break;
 
             case "mul":
             case "muls":
                 type = InstructionType.OTHER;
                 inst = Instruction.MUL;
+                size = 2;
                 break;
 
             case "ror":
             case "rors":
                 type = InstructionType.OTHER;
                 inst = Instruction.ROR;
+                size = 2;
                 break;
 
             case "sbc":
             case "sbcs":
                 type = InstructionType.OTHER;
                 inst = Instruction.SBC;
+                size = 2;
                 break;
 
             case "sxtb":
                 type = InstructionType.OTHER;
                 inst = Instruction.SXTB;
+                size = 2;
                 break;
 
             case "sxth":
                 type = InstructionType.OTHER;
                 inst = Instruction.SXTH;
+                size = 2;
                 break;
 
             case "nop":
                 type = InstructionType.OTHER;
                 inst = Instruction.NOP;
+                size = 2;
                 break;
 
             case "tst":
                 type = InstructionType.OTHER;
                 inst = Instruction.TST;
+                size = 2;
                 break;
 
             case "uxth":
                 type = InstructionType.OTHER;
                 inst = Instruction.UXTH;
+                size = 2;
                 break;
 
             case "uxtb":
                 type = InstructionType.OTHER;
                 inst = Instruction.UXTB;
+                size = 2;
                 break;
 
             case "mvn":
             case "mvns":
                 type = InstructionType.OTHER;
                 inst = Instruction.MVN;
+                size = 2;
                 break;
 
             case "lsr":
             case "lsrs":
                 type = InstructionType.OTHER;
                 inst = Instruction.LSR;
+                size = 2;
                 break;
 
             case "cmn":
                 type = InstructionType.OTHER;
                 inst = Instruction.CMN;
+                size = 2;
                 break;
 
             case "cmp":
                 type = InstructionType.OTHER;
                 inst = Instruction.CMP;
+                size = 2;
                 break;
 
             case "bic":
             case "bics":
                 type = InstructionType.OTHER;
                 inst = Instruction.BIC;
+                size = 2;
                 break;
 
             case "asr":
             case "asrs":
                 type = InstructionType.OTHER;
                 inst = Instruction.ASR;
+                size = 2;
                 break;
 
             case "and":
             case "ands":
                 type = InstructionType.OTHER;
                 inst = Instruction.AND;
+                size = 2;
                 break;
 
             case "adc":
             case "adcs":
                 type = InstructionType.OTHER;
                 inst = Instruction.ADC;
+                size = 2;
                 break;
 
             case "bkpt":
@@ -713,6 +762,7 @@ public class ISALine
                 inst = Instruction.BKPT;
                 // Assume this is a "halt" instruction for the simulator
                 exit = true;
+                size = 2;
                 break;
 
             case "svc":
@@ -720,17 +770,20 @@ public class ISALine
                 inst = Instruction.SVC;
                 // Assume this is a "halt" instruction for the simulator
                 exit = true;
+                size = 2;
                 break;
 
             case "cps":
             case "cpsid":
                 type = InstructionType.OTHER;
                 inst = Instruction.CPS;
+                size = 2;
                 break;
 
             case "udf":
                 type = InstructionType.OTHER;
                 inst = Instruction.UDF;
+                size = 2;
                 break;
 
             default:
