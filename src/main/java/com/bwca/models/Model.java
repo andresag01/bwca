@@ -37,7 +37,9 @@ abstract public class Model
     public abstract String getEdgeSummary(BranchTarget edge);
 
     public abstract String getPositiveBlockCost(ISABlock block);
+    public abstract String getNegativeBlockCost(ISABlock block);
 
+    public abstract String getPositiveEdgeCost(BranchTarget edge);
     public abstract String getNegativeEdgeCost(BranchTarget edge);
 
     public abstract String getInterceptCost();

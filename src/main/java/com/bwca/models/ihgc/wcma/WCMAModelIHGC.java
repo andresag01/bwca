@@ -79,10 +79,24 @@ public class WCMAModelIHGC extends Model
         double cost = blocks.get(block).getPositiveCost();
         if (cost < 0.0)
         {
-            System.out.println("Positive block cost is actually negative!");
-            System.exit(1);
+            return null;
         }
         return String.format("%.2f", cost);
+    }
+
+    public String getNegativeBlockCost(ISABlock block)
+    {
+        double cost = blocks.get(block).getPositiveCost();
+        if (cost >= 0.0)
+        {
+            return null;
+        }
+        return String.format("%.2f", cost);
+    }
+
+    public String getPositiveEdgeCost(BranchTarget edge)
+    {
+        return null;
     }
 
     public String getNegativeEdgeCost(BranchTarget edge)

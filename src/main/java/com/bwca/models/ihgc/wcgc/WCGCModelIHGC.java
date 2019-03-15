@@ -66,8 +66,23 @@ public class WCGCModelIHGC extends Model
 
         if (cost < 0.0)
         {
-            System.out.printf("WCGC block%d cost < 0.0\n", block.getId());
-            System.exit(1);
+            return null;
+        }
+
+        return String.format("%.2f", cost);
+    }
+
+    public String getNegativeBlockCost(ISABlock block)
+    {
+        String wcmaCost = wcma.getPositiveBlockCost(block);
+        String wcetCost = wcet.getPositiveBlockCost(block);
+
+        double cost =
+            Double.parseDouble(wcetCost) - Double.parseDouble(wcmaCost);
+
+        if (cost >= 0.0)
+        {
+            return null;
         }
 
         return String.format("%.2f", cost);
@@ -94,8 +109,34 @@ public class WCGCModelIHGC extends Model
             Double.parseDouble(wcmaCost) - Double.parseDouble(wcetCost);
         if (cost > 0.0)
         {
-            System.out.println("WCGC edge cost is > 0.0");
+            return null;
+        }
+
+        return String.format("%.2f", cost);
+    }
+
+    public String getPositiveEdgeCost(BranchTarget edge)
+    {
+        String wcmaCost = wcma.getNegativeEdgeCost(edge);
+        String wcetCost = wcet.getNegativeEdgeCost(edge);
+
+        if (wcmaCost == null && wcetCost == null)
+        {
+            return null;
+        }
+        else if (wcmaCost == null && wcetCost != null ||
+                 wcmaCost != null && wcetCost == null)
+        {
+            System.out.println("WCGC: WCET and WCMA edge are not null "
+                               + "simultaneously");
             System.exit(1);
+        }
+
+        double cost =
+            Double.parseDouble(wcmaCost) - Double.parseDouble(wcetCost);
+        if (cost <= 0.0)
+        {
+            return null;
         }
 
         return String.format("%.2f", cost);

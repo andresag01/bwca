@@ -65,6 +65,11 @@ public class WCETModelIHGC extends Model
         return Integer.toString(blocks.get(block).getPositiveCost());
     }
 
+    public String getNegativeBlockCost(ISABlock block)
+    {
+        return null;
+    }
+
     public String getNegativeEdgeCost(BranchTarget edge)
     {
         WCETEdgeCostIHGC cost = edges.get(edge);
@@ -76,6 +81,11 @@ public class WCETModelIHGC extends Model
         {
             return String.format("%d", cost.getNegativeCost());
         }
+    }
+
+    public String getPositiveEdgeCost(BranchTarget edge)
+    {
+        return null;
     }
 
     public String getInterceptCost()

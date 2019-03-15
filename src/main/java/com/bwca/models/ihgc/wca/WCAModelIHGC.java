@@ -62,6 +62,16 @@ public class WCAModelIHGC extends Model
         return Long.toString(blocks.get(block).getPositiveCost());
     }
 
+    public String getNegativeBlockCost(ISABlock block)
+    {
+        return null;
+    }
+
+    public String getPositiveEdgeCost(BranchTarget edge)
+    {
+        return null;
+    }
+
     public String getNegativeEdgeCost(BranchTarget edge)
     {
         return null;

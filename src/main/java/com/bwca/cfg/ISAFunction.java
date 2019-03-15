@@ -858,29 +858,67 @@ public class ISAFunction
         String ilpFunctionType = model.getObjectiveFunctionType();
 
         // Make the string for the problem
-        List<String> problem = new LinkedList<String>();
+        List<String> problemSub = new LinkedList<String>();
+        List<String> problemAdd = new LinkedList<String>();
         for (ISABlock block : blocks)
         {
-            StringBuilder blockCost = new StringBuilder();
-
             // Add the block cost to the top level formula
-            blockCost.append(model.getPositiveBlockCost(block) + " " +
-                             blockPfix + block.getId());
-            for (BranchTarget edge : block.getEdges())
+            String positiveCost = model.getPositiveBlockCost(block);
+            String negativeCost = model.getNegativeBlockCost(block);
+
+            if (positiveCost != null)
             {
-                String neg = model.getNegativeEdgeCost(edge);
-                if (neg != null)
-                {
-                    blockCost.append(" - " + neg + " " + edgePfix +
-                                     edge.getId());
-                }
+                positiveCost = String.format("%s %s%d",
+                                             positiveCost,
+                                             blockPfix,
+                                             block.getId());
+                problemAdd.add(positiveCost);
+            }
+            if (negativeCost != null)
+            {
+                negativeCost = String.format("%s %s%d",
+                                             negativeCost,
+                                             blockPfix,
+                                             block.getId());
+                problemSub.add(negativeCost);
             }
 
-            problem.add(blockCost.toString());
+            for (BranchTarget edge : block.getEdges())
+            {
+                positiveCost = model.getPositiveEdgeCost(edge);
+                negativeCost = model.getNegativeEdgeCost(edge);
+
+                if (positiveCost != null)
+                {
+                    positiveCost = String.format("%s %s%d",
+                                                 positiveCost,
+                                                 blockPfix,
+                                                 block.getId());
+                    problemAdd.add(positiveCost);
+                }
+                if (negativeCost != null)
+                {
+                    negativeCost = String.format("%s %s%d",
+                                                 negativeCost,
+                                                 blockPfix,
+                                                 block.getId());
+                    problemSub.add(negativeCost);
+                }
+            }
         }
         String intercept = model.getInterceptCost();
-        String problemStr = String.join("\n     + ", problem) +
-            ((intercept != null) ? "\n     " + intercept : "");
+        if (problemAdd.size() < 1)
+        {
+            System.out.println("Objective function does not have additive "
+                               + "components!");
+            System.exit(1);
+        }
+        String problemStr = String.join("\n     + ", problemAdd);
+        if (problemSub.size() > 0)
+        {
+            problemStr += "\n     - " + String.join("\n    - ", problemSub);
+        }
+        problemStr += (intercept != null) ? "\n    " + intercept : "";
 
         // Make the string for the constraints
         //  - Add an output constraint for every block
