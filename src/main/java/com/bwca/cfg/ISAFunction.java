@@ -781,7 +781,6 @@ public class ISAFunction
 
     public void checkMissingInformation(FunctionCallDetails call)
     {
-        System.out.println("Checking function " + name);
         for (ISABlock block : blocks)
         {
             for (BranchTarget edge : block.getEdges())

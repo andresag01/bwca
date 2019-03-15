@@ -16,6 +16,10 @@ public class CFGConfiguration
         Pattern.compile("^branch\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
+    static final Pattern CMD_UNFEASIBLE_BRANCH =
+        Pattern.compile("^unfeasible\\s+branch\\s+"
+                        + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
+                        + "(?<dest>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
     static final Pattern CMD_COMMENT = Pattern.compile("^#.*$");
     static final Pattern CMD_FUNC = Pattern.compile("^function\\s+"
                                                     + "(?<name>[a-zA-Z_]\\w*)"
@@ -34,6 +38,7 @@ public class CFGConfiguration
                         + "(?<dest>[a-zA-Z_]\\w*)$");
 
     private Map<Long, BranchTarget> branchTargets;
+    private Map<Long, BranchTarget> unfeasibleBranchTargets;
     private Map<String, Long> funcs;
     private Map<Long, Map<Long, LoopBound>> loops;
     private Map<Long, String> functionCalls;
@@ -41,6 +46,7 @@ public class CFGConfiguration
     public CFGConfiguration()
     {
         branchTargets = new HashMap<Long, BranchTarget>();
+        unfeasibleBranchTargets = new HashMap<Long, BranchTarget>();
         funcs = new HashMap<String, Long>();
         loops = new HashMap<Long, Map<Long, LoopBound>>();
         functionCalls = new HashMap<Long, String>();
@@ -65,6 +71,12 @@ public class CFGConfiguration
     public Long getBranchDestination(long address)
     {
         BranchTarget branch = branchTargets.get(address);
+        return (branch == null) ? null : branch.getAddress();
+    }
+
+    public Long getUnfeasibleBranchDestination(long address)
+    {
+        BranchTarget branch = unfeasibleBranchTargets.get(address);
         return (branch == null) ? null : branch.getAddress();
     }
 
@@ -144,6 +156,30 @@ public class CFGConfiguration
                     continue;
                 }
 
+                match = CMD_UNFEASIBLE_BRANCH.matcher(line);
+                if (match.matches())
+                {
+                    long src = strToLong(match.group("src"));
+                    long dest = strToLong(match.group("dest"));
+                    if ((src & 0x1) != 0)
+                    {
+                        System.out.printf("Source address at '%s' is not "
+                                          + "aligned to halfword boundary\n",
+                                          src);
+                        System.exit(1);
+                    }
+                    if ((dest & 0x1) != 0)
+                    {
+                        System.out.printf("Destination address at '%s' is not "
+                                          + "aligned to halfword boundary\n",
+                                          dest);
+                        System.exit(1);
+                    }
+                    unfeasibleBranchTargets.put(src,
+                                                new BranchTarget(dest, null));
+                    continue;
+                }
+
                 match = CMD_BRANCH.matcher(line);
                 if (match.matches())
                 {
@@ -158,7 +194,7 @@ public class CFGConfiguration
                     }
                     if ((dest & 0x1) != 0)
                     {
-                        System.out.printf("Source address at '%s' is not "
+                        System.out.printf("Destination address at '%s' is not "
                                           + "aligned to halfword boundary\n",
                                           dest);
                         System.exit(1);
@@ -208,6 +244,15 @@ public class CFGConfiguration
 
         System.out.println("Branch targets:");
         for (Map.Entry<Long, BranchTarget> entry : branchTargets.entrySet())
+        {
+            System.out.printf("    0x%08x -> (%s)\n",
+                              entry.getKey(),
+                              entry.getValue().toString());
+        }
+
+        System.out.println("Unfeasible branch targets:");
+        for (Map.Entry<Long, BranchTarget> entry :
+             unfeasibleBranchTargets.entrySet())
         {
             System.out.printf("    0x%08x -> (%s)\n",
                               entry.getKey(),

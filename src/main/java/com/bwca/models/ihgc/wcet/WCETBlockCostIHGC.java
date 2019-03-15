@@ -1,6 +1,6 @@
-package com.bwca.models;
+package com.bwca.models.ihgc.wcet;
 
-public class WCETBlockCost
+public class WCETBlockCostIHGC
 {
     private int alu;
     private int mem;
@@ -9,7 +9,7 @@ public class WCETBlockCost
     private int dirMem;
     private int funcCall;
 
-    public WCETBlockCost()
+    public WCETBlockCostIHGC()
     {
         this.alu = 0;
         this.mem = 0;

@@ -166,11 +166,21 @@ public class ISALine
 
         if (inst == Instruction.B)
         {
-            branchTargets.add(new BranchTarget(address, true));
+            addBranchTargetIfFeasible(address, true);
             if (type == InstructionType.COND_BRANCH)
             {
-                branchTargets.add(new BranchTarget(this.address + 2, false));
+                addBranchTargetIfFeasible(this.address + 2, false);
             }
+        }
+    }
+
+    private void addBranchTargetIfFeasible(long dest, boolean resolution)
+    {
+        Long unfeasibleDest = config.getUnfeasibleBranchDestination(address);
+
+        if (unfeasibleDest == null || unfeasibleDest != dest)
+        {
+            branchTargets.add(new BranchTarget(dest, resolution));
         }
     }
 

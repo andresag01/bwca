@@ -1,10 +1,10 @@
-package com.bwca.models;
+package com.bwca.models.ihgc.wcet;
 
-public class WCETEdgeCost
+public class WCETEdgeCostIHGC
 {
     private int falseBranch;
 
-    public WCETEdgeCost()
+    public WCETEdgeCostIHGC()
     {
         this.falseBranch = 0;
     }

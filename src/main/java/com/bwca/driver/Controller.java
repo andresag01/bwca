@@ -44,11 +44,6 @@ public class Controller
     private String callocFunctionName;
     private String reallocFunctionName;
 
-    public static final String[][] MODELS = {
-        { "wcet", "Worst-Case Execution Time" },
-        { "wca", "Worst-Case Allocation" },
-        { "wcma", "Worst-Case Memory Access" },
-    };
     private static final String HELP_MSG = "Bristol Worst Case Analysis Tool\n"
         + "\n"
         + "ARGUMENTS:\n"
@@ -133,14 +128,7 @@ public class Controller
                     break;
 
                 case "-l":
-                    StringBuilder builder = new StringBuilder();
-                    for (String[] model : MODELS)
-                    {
-                        builder.append(String.format(
-                            "    %6s  %s\n", model[0], model[1]));
-                    }
-                    System.out.println("Available models:");
-                    System.out.print(builder.toString());
+                    Model.printModelsList();
                     System.exit(0);
                     break;
 

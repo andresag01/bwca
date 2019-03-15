@@ -1,4 +1,4 @@
-package com.bwca.models;
+package com.bwca.models.ihgc.wcet;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -9,28 +9,29 @@ import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
 import com.bwca.cfg.FunctionCallDetails;
+import com.bwca.models.Model;
 
-public class WCETModel extends Model
+public class WCETModelIHGC extends Model
 {
-    private Map<ISABlock, WCETBlockCost> blocks;
-    private Map<BranchTarget, WCETEdgeCost> edges;
+    private Map<ISABlock, WCETBlockCostIHGC> blocks;
+    private Map<BranchTarget, WCETEdgeCostIHGC> edges;
     private Map<FunctionCallDetails, Integer> calls;
 
-    public WCETModel()
+    public WCETModelIHGC()
     {
-        blocks = new HashMap<ISABlock, WCETBlockCost>();
-        edges = new HashMap<BranchTarget, WCETEdgeCost>();
+        blocks = new HashMap<ISABlock, WCETBlockCostIHGC>();
+        edges = new HashMap<BranchTarget, WCETEdgeCostIHGC>();
         calls = new HashMap<FunctionCallDetails, Integer>();
     }
 
     public String getName()
     {
-        return "wcet";
+        return "ihgc_wcet";
     }
 
     public String getBlockSummary(ISABlock block)
     {
-        WCETBlockCost cost = blocks.get(block);
+        WCETBlockCostIHGC cost = blocks.get(block);
         return Integer.toString(cost.getPositiveCost());
     }
 
@@ -77,7 +78,7 @@ public class WCETModel extends Model
 
     public void addFunctionCallCost(ISABlock block, FunctionCallDetails call)
     {
-        WCETBlockCost cost = blocks.get(block);
+        WCETBlockCostIHGC cost = blocks.get(block);
         Integer callCost = calls.get(call);
 
         if (cost == null)
@@ -121,11 +122,11 @@ public class WCETModel extends Model
 
     public void addLineCost(ISABlock block, ISALine inst)
     {
-        WCETBlockCost cost = blocks.get(block);
+        WCETBlockCostIHGC cost = blocks.get(block);
 
         if (cost == null)
         {
-            cost = new WCETBlockCost();
+            cost = new WCETBlockCostIHGC();
             blocks.put(block, cost);
         }
 
@@ -276,11 +277,11 @@ public class WCETModel extends Model
 
     public void addEdgeCost(ISABlock block, BranchTarget edge)
     {
-        WCETEdgeCost cost = edges.get(edge);
+        WCETEdgeCostIHGC cost = edges.get(edge);
 
         if (edges.get(edge) == null)
         {
-            cost = new WCETEdgeCost();
+            cost = new WCETEdgeCostIHGC();
             edges.put(edge, cost);
         }
 
