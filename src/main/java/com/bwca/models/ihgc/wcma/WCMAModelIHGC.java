@@ -1,4 +1,4 @@
-package com.bwca.models;
+package com.bwca.models.ihgc.wcma;
 
 import java.util.Map;
 import java.util.HashMap;
@@ -8,21 +8,25 @@ import com.bwca.cfg.ISABlock;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
+import com.bwca.cfg.FunctionCallDetails;
+import com.bwca.models.Model;
 
-public class WCMAModel extends Model
+public class WCMAModelIHGC extends Model
 {
-    private Map<ISABlock, WCMABlockCost> blocks;
-    private Map<BranchTarget, WCMAEdgeCost> edges;
+    private Map<ISABlock, WCMABlockCostIHGC> blocks;
+    private Map<BranchTarget, WCMAEdgeCostIHGC> edges;
+    private Map<FunctionCallDetails, Double> calls;
 
     private int instsPerFetch;
 
     private static final int BYTES_PER_INST = 2;
     private static final int BYTES_PER_WORD = 4;
 
-    public WCMAModel(int fetchWidthBytes)
+    public WCMAModelIHGC(int fetchWidthBytes)
     {
-        blocks = new HashMap<ISABlock, WCMABlockCost>();
-        edges = new HashMap<BranchTarget, WCMAEdgeCost>();
+        blocks = new HashMap<ISABlock, WCMABlockCostIHGC>();
+        edges = new HashMap<BranchTarget, WCMAEdgeCostIHGC>();
+        calls = new HashMap<FunctionCallDetails, Double>();
 
         instsPerFetch = fetchWidthBytes / BYTES_PER_INST;
 
@@ -35,24 +39,32 @@ public class WCMAModel extends Model
 
     public String getName()
     {
-        return "wcma";
+        return "wcma_ihgc";
     }
 
     public String getBlockSummary(ISABlock block)
     {
-        WCMABlockCost cost = blocks.get(block);
+        WCMABlockCostIHGC cost = blocks.get(block);
         return String.format("f=%.2f,m=%.2f", cost.getFetch(), cost.getMem());
     }
 
-    public String getPositiveBlockCost(ISABlock block)
+    public String getBlockDetails(ISABlock block)
     {
-        WCMABlockCost cost = blocks.get(block);
-        return String.format("%.2f", cost.getFetch() + cost.getMem());
-    }
+        StringBuilder builder = new StringBuilder();
 
-    public String getInterceptCost()
-    {
-        return null;
+        builder.append(String.format(" * %s%d:\n", "b", block.getId()));
+        builder.append(blocks.get(block).toString());
+
+        for (FunctionCallDetails call : block.getFunctionCallDependencies())
+        {
+            String callDetails = String.format(" *        - %s@0x%08x: %.2f\n",
+                                               call.getCalleeName(),
+                                               call.getCallAddress(),
+                                               calls.get(call));
+            builder.append(callDetails);
+        }
+
+        return builder.toString();
     }
 
     public String getEdgeSummary(BranchTarget edge)
@@ -61,9 +73,20 @@ public class WCMAModel extends Model
         return (cost == null) ? cost : "-" + cost;
     }
 
+    public String getPositiveBlockCost(ISABlock block)
+    {
+        double cost = blocks.get(block).getPositiveCost();
+        if (cost < 0.0)
+        {
+            System.out.println("Positive block cost is actually negative!");
+            System.exit(1);
+        }
+        return String.format("%.2f", cost);
+    }
+
     public String getNegativeEdgeCost(BranchTarget edge)
     {
-        WCMAEdgeCost cost = edges.get(edge);
+        WCMAEdgeCostIHGC cost = edges.get(edge);
         if (cost == null)
         {
             return null;
@@ -72,6 +95,55 @@ public class WCMAModel extends Model
         {
             return String.format("%.2f", cost.getNegativeCost());
         }
+    }
+
+    public String getInterceptCost()
+    {
+        return null;
+    }
+
+    public void addFunctionCallCost(ISABlock block, FunctionCallDetails call)
+    {
+        WCMABlockCostIHGC cost = blocks.get(block);
+        Double callCost = calls.get(call);
+
+        if (cost == null)
+        {
+            System.out.println("Block is not in model when adding function "
+                               + "call cost!");
+            System.exit(1);
+        }
+        if (callCost == null)
+        {
+            System.out.println("Call cost not available in model");
+            System.exit(1);
+        }
+
+        cost.addFunctionCall(callCost);
+    }
+
+    public void addFunctionCallDetailsCost(FunctionCallDetails call,
+                                           String cost)
+    {
+        calls.put(call, Double.parseDouble(cost));
+    }
+
+    public String getObjectiveFunctionType()
+    {
+        return "max";
+    }
+
+    public String getFunctionCallCost(FunctionCallDetails call)
+    {
+        Double cost = calls.get(call);
+
+        if (cost == null)
+        {
+            System.out.println("Function call not registered with model!");
+            System.exit(1);
+        }
+
+        return cost.toString();
     }
 
     private double costOfFetch(long instLen)
@@ -138,14 +210,15 @@ public class WCMAModel extends Model
 
     public void addLineCost(ISABlock block, ISALine inst)
     {
-        WCMABlockCost cost = blocks.get(block);
+        WCMABlockCostIHGC cost = blocks.get(block);
 
         if (cost == null)
         {
-            cost = new WCMABlockCost();
+            cost = new WCMABlockCostIHGC();
             blocks.put(block, cost);
         }
 
+        BranchTarget branchTarget;
         long targetAddress;
         long instAddress = inst.getAddress();
         double subFetch = 0.0;
@@ -261,7 +334,15 @@ public class WCMAModel extends Model
                 // following instructions in the fetch buffer
                 cost.addFetch(costOfBranchDiscard(instAddress));
                 // Only add part of the fetch cost depending on alignment
-                targetAddress = inst.getBranchTarget(true).getAddress();
+                branchTarget = inst.getBranchTarget(true);
+                if (branchTarget == null)
+                {
+                    // The branch will never be resolved to true, so this
+                    // instruction never really branches and we do not need to
+                    // add any more fetch costs
+                    break;
+                }
+                targetAddress = branchTarget.getAddress();
                 cost.addFetch(costOfFetchingBranchTarget(targetAddress));
                 break;
 
@@ -295,7 +376,6 @@ public class WCMAModel extends Model
                 cost.addFetch(costOfFetch(1));
                 break;
 
-            case FUNC_CALL:
             case FUNC_EXIT:
                 // These are dummy instructions with no cost
                 break;
@@ -318,6 +398,13 @@ public class WCMAModel extends Model
         ISALine inst = block.getLastLine();
         double cost = 0.0;
 
+        if (inst.getBranchTarget(true) == null)
+        {
+            // The branch will never actually be executed, so no need to
+            // subtract anything at the edge
+            return;
+        }
+
         // Fetching this instruction and (potentially) discarding the
         // following instructions in the fetch buffer
         long instAddress = inst.getAddress();
@@ -329,11 +416,11 @@ public class WCMAModel extends Model
         // Dont include the cost of fetching and executing this branch as a NOP
         cost -= costOfFetch(1);
 
-        WCMAEdgeCost edgeCost = edges.get(edge);
+        WCMAEdgeCostIHGC edgeCost = edges.get(edge);
 
         if (edges.get(edge) == null)
         {
-            edgeCost = new WCMAEdgeCost();
+            edgeCost = new WCMAEdgeCostIHGC();
             edges.put(edge, edgeCost);
         }
         edgeCost.subFalseBranch(cost);

@@ -1,10 +1,10 @@
-package com.bwca.models;
+package com.bwca.models.ihgc.wcma;
 
-public class WCMAEdgeCost
+public class WCMAEdgeCostIHGC
 {
     private double falseBranch;
 
-    public WCMAEdgeCost()
+    public WCMAEdgeCostIHGC()
     {
         this.falseBranch = 0.0;
     }

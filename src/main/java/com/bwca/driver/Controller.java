@@ -51,7 +51,7 @@ public class Controller
         + "    -o       Directory to store output files.\n"
         + "    -h       Prints this help message\n"
         + "    -l       Print a list of options for -m\n"
-        + "    -w       Fetch width in bytes. Default: 4\n"
+        + "    -f       Fetch width in bytes. Default: 4\n"
         + "    -e       Entry function\n"
         + "    -m       Analyze the binary file with the specified model.\n"
         + "             Repeat this option as many times as needed to apply \n"
@@ -118,10 +118,10 @@ public class Controller
                     selectedModels.add(args[++i]);
                     break;
 
-                case "-w":
+                case "-f":
                     if (i + 1 == args.length)
                     {
-                        System.out.println("-w option takes one argument");
+                        System.out.println("-f option takes one argument");
                         System.exit(1);
                     }
                     fetchWidthBytes = Integer.parseInt(args[++i]);
@@ -179,7 +179,7 @@ public class Controller
         }
         for (String modelOption : selectedModels)
         {
-            Model model = Model.createModel(modelOption);
+            Model model = Model.createModel(modelOption, fetchWidthBytes);
             if (model == null)
             {
                 System.out.println("Unrecognized model " + modelOption);

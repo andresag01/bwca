@@ -26,7 +26,7 @@ public class WCETModelIHGC extends Model
 
     public String getName()
     {
-        return "ihgc_wcet";
+        return "wcet_ihgc";
     }
 
     public String getBlockSummary(ISABlock block)
@@ -67,8 +67,15 @@ public class WCETModelIHGC extends Model
 
     public String getNegativeEdgeCost(BranchTarget edge)
     {
-        int cost = edges.get(edge).getNegativeCost();
-        return (cost == 0) ? null : Integer.toString(cost);
+        WCETEdgeCostIHGC cost = edges.get(edge);
+        if (cost == null)
+        {
+            return null;
+        }
+        else
+        {
+            return String.format("%d", cost.getNegativeCost());
+        }
     }
 
     public String getInterceptCost()
@@ -113,7 +120,7 @@ public class WCETModelIHGC extends Model
 
         if (cost == null)
         {
-            System.out.println("Function call not registered with model!\n");
+            System.out.println("Function call not registered with model!");
             System.exit(1);
         }
 
@@ -195,8 +202,18 @@ public class WCETModelIHGC extends Model
                 break;
 
             case B:
-                cost.addAlu(2);
-                cost.addBranch(1);
+                if (inst.getBranchTarget(true) != null)
+                {
+                    // Some edges can be eliminated via a config. So we need to
+                    // be careful with this instruction because its full cost
+                    // will not be consumed IFF the branch is never taken
+                    cost.addAlu(2);
+                    cost.addBranch(1);
+                }
+                else
+                {
+                    cost.addAlu(1);
+                }
                 break;
 
             case ADD:
@@ -277,6 +294,22 @@ public class WCETModelIHGC extends Model
 
     public void addEdgeCost(ISABlock block, BranchTarget edge)
     {
+        // This edge reduces the cost of the block if it is the false
+        // resolution of a branch
+        if (edge.getCondition() == null || edge.getCondition())
+        {
+            return;
+        }
+
+        ISALine inst = block.getLastLine();
+
+        if (inst.getBranchTarget(true) == null)
+        {
+            // The branch will never actually be executed, so no need to
+            // subtract anything at the edge
+            return;
+        }
+
         WCETEdgeCostIHGC cost = edges.get(edge);
 
         if (edges.get(edge) == null)
@@ -284,12 +317,6 @@ public class WCETModelIHGC extends Model
             cost = new WCETEdgeCostIHGC();
             edges.put(edge, cost);
         }
-
-        // This edge reduces the cost of the block if it is the false
-        // resolution of a branch
-        if (edge.getCondition() != null && !edge.getCondition())
-        {
-            cost.subFalseBranch(2);
-        }
+        cost.subFalseBranch(2);
     }
 }

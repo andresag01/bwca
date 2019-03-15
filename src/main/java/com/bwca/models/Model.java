@@ -6,12 +6,15 @@ import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.ISALine;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
 import com.bwca.models.ihgc.wca.WCAModelIHGC;
+import com.bwca.models.ihgc.wcma.WCMAModelIHGC;
 
 abstract public class Model
 {
     private static final String[][] MODELS = {
         { "wcet_ihgc", "Worst-Case Execution Time for the IHGC processor" },
         { "wca_ihgc", "Worst-Case Allocation for the IHGC processor" },
+        { "wcma_ihgc",
+          "Worst-Case Memory Access cycles for the IHGC processor" },
     };
 
     public abstract void addLineCost(ISABlock block, ISALine inst);
@@ -53,7 +56,7 @@ abstract public class Model
         System.out.print(builder.toString());
     }
 
-    public static Model createModel(String modelOption)
+    public static Model createModel(String modelOption, int fetchWidthBytes)
     {
         switch (modelOption)
         {
@@ -62,6 +65,9 @@ abstract public class Model
 
             case "wca_ihgc":
                 return new WCAModelIHGC();
+
+            case "wcma_ihgc":
+                return new WCMAModelIHGC(fetchWidthBytes);
 
             default:
                 return null;
