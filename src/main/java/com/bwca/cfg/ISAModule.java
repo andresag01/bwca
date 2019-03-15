@@ -75,44 +75,6 @@ public class ISAModule
         this.infoMsgs = new LinkedList<String>();
     }
 
-    private void checkFunctionMissingInformation(FunctionCallDetails call)
-    {
-        ISAFunction func = funcMap.get(call.getCalleeName());
-
-        for (FunctionCallDetails dep : func.getFunctionCallDependencies())
-        {
-            checkFunctionMissingInformation(dep);
-        }
-
-        func.checkMissingInformation(call);
-    }
-
-    public boolean hasMissingInformation()
-    {
-        FunctionCallDetails call;
-
-        // Traverse all functions and see if we have the information needed to
-        // formulate and solve and ILP
-        call = new FunctionCallDetails(entryFunction, 0, null);
-        checkFunctionMissingInformation(call);
-
-        if (infoMsgs.size() > 0)
-        {
-            return true;
-        }
-
-        for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
-        {
-            List<String> msgs = entry.getValue().getMissingInfoMessages();
-            if (msgs.size() > 0)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public void writeMissingInfoConfig(String outputConfig)
     {
         try
@@ -302,11 +264,51 @@ public class ISAModule
 
     public void analyzeCFG()
     {
+        FunctionCallDetails call;
+
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
         {
             entry.getValue().analyzeCFG();
         }
+
+        // Traverse all functions and see if we have the information needed to
+        // formulate and solve and ILP
+        call = new FunctionCallDetails(entryFunction, 0, null);
+        checkFunctionMissingInformation(call);
+
     }
+
+    private void checkFunctionMissingInformation(FunctionCallDetails call)
+    {
+        ISAFunction func = funcMap.get(call.getCalleeName());
+
+        for (FunctionCallDetails dep : func.getFunctionCallDependencies())
+        {
+            checkFunctionMissingInformation(dep);
+        }
+
+        func.checkMissingInformation(call);
+    }
+
+    public boolean hasMissingInformation()
+    {
+        if (infoMsgs.size() > 0)
+        {
+            return true;
+        }
+
+        for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
+        {
+            List<String> msgs = entry.getValue().getMissingInfoMessages();
+            if (msgs.size() > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
     public ISAFunction getFunction(String key)
     {

@@ -36,12 +36,19 @@ public class CFGConfiguration
     static final Pattern CMD_FUNC_CALL = Pattern.compile("^call\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>[a-zA-Z_]\\w*)$");
+    static final Pattern CMD_ALLOC_SIZE =
+        Pattern.compile("^allocation\\s+"
+                        + "(?<address>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})"
+                        + "\\s+(?<size>\\d+)"
+                        + "\\s+from\\s+call\\s+"
+                        + "(?<call>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
 
     private Map<Long, BranchTarget> branchTargets;
     private Map<Long, BranchTarget> unfeasibleBranchTargets;
     private Map<String, Long> funcs;
     private Map<Long, Map<Long, LoopBound>> loops;
     private Map<Long, String> functionCalls;
+    private Map<Long, Map<Long, Long>> allocs;
 
     public CFGConfiguration()
     {
@@ -50,11 +57,18 @@ public class CFGConfiguration
         funcs = new HashMap<String, Long>();
         loops = new HashMap<Long, Map<Long, LoopBound>>();
         functionCalls = new HashMap<Long, String>();
+        allocs = new HashMap<Long, Map<Long, Long>>();
     }
 
     public String getFunctionCalleeName(long address)
     {
         return functionCalls.get(address);
+    }
+
+    public Long getAllocationSize(long callAddress, long allocAddress)
+    {
+        Map<Long, Long> map = allocs.get(callAddress);
+        return (map == null) ? null : map.get(allocAddress);
     }
 
     public Map<String, Long> getFunctions()
@@ -138,6 +152,26 @@ public class CFGConfiguration
                         map = loops.get(callAddress);
                     }
                     map.put(address, new LoopBound(lbound, ubound));
+                    continue;
+                }
+
+                match = CMD_ALLOC_SIZE.matcher(line);
+                if (match.matches())
+                {
+                    long address = strToLong(match.group("address"));
+                    long size = strToLong(match.group("size"));
+                    long callAddress = strToLong(match.group("call"));
+                    Map<Long, Long> map;
+                    if (!allocs.containsKey(callAddress))
+                    {
+                        map = new HashMap<Long, Long>();
+                        allocs.put(callAddress, map);
+                    }
+                    else
+                    {
+                        map = allocs.get(callAddress);
+                    }
+                    map.put(address, size);
                     continue;
                 }
 
@@ -239,6 +273,20 @@ public class CFGConfiguration
                                   lentry.getKey(),
                                   lentry.getValue().getLowerBound(),
                                   lentry.getValue().getUpperBound());
+            }
+        }
+
+        System.out.println("Allocation size bounds:");
+        for (Map.Entry<Long, Map<Long, Long>> entry : allocs.entrySet())
+        {
+            System.out.printf("    0x%08x:\n", entry.getKey());
+
+            Map<Long, Long> boundMap = entry.getValue();
+            for (Map.Entry<Long, Long> lentry : boundMap.entrySet())
+            {
+                System.out.printf("        0x%08x [%d]\n",
+                                  lentry.getKey(),
+                                  lentry.getValue());
             }
         }
 

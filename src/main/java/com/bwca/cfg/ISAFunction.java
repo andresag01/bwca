@@ -817,6 +817,32 @@ public class ISAFunction
                     infoMsgs.add(msg);
                 }
             }
+
+            // TODO: Skip over this check if we are not applying the relevant
+            // cost mode (e.g. WCA)
+            for (ISALine inst : block.getInstructions())
+            {
+                if (inst.getInstruction() == Instruction.WFI)
+                {
+                    long instAddress = inst.getAddress();
+                    long callAddress = call.getCallAddress();
+                    Long allocSize = config.getAllocationSize(callAddress,
+                                                              instAddress);
+
+                    if (allocSize == null)
+                    {
+                        String msg = String.format("allocation 0x%08x <BOUND> "
+                                                   + "from call 0x%08x",
+                                                   instAddress,
+                                                   callAddress);
+                        infoMsgs.add(msg);
+                    }
+                    else
+                    {
+                        inst.setAllocationSize(allocSize);
+                    }
+                }
+            }
         }
     }
 

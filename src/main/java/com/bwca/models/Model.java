@@ -5,11 +5,13 @@ import com.bwca.cfg.ISABlock;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.ISALine;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
+import com.bwca.models.ihgc.wca.WCAModelIHGC;
 
 abstract public class Model
 {
     private static final String[][] MODELS = {
         { "wcet_ihgc", "Worst-Case Execution Time for the IHGC processor" },
+        { "wca_ihgc",  "Worst-Case Allocation for the IHGC processor" },
     };
 
     public abstract void addLineCost(ISABlock block, ISALine inst);
@@ -57,6 +59,9 @@ abstract public class Model
         {
             case "wcet_ihgc":
                 return new WCETModelIHGC();
+
+            case "wca_ihgc":
+                return new WCAModelIHGC();
 
             default:
                 return null;
