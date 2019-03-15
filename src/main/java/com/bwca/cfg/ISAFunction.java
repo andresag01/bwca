@@ -64,7 +64,7 @@ public class ISAFunction
         + "    }\n"
         + "}";
     static final String ILP_TOP_LEVEL = "/*\n"
-        + " ILP for:\n"
+        + " * ILP for:\n"
         + " *     - Function: %s@0x%08x\n"
         + " *     - Cost model: %s\n"
         + " */\n\n"
