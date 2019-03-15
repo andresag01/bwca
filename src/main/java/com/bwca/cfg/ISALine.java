@@ -280,9 +280,8 @@ public class ISALine
                                             long funcSize)
     {
         Long branchDestAddress = config.getBranchDestination(address);
-        boolean isInFunction = isAddressInFunction(funcBaseAddress,
-                                                   funcSize,
-                                                   branchDestAddress);
+        boolean isInFunction =
+            isAddressInFunction(funcBaseAddress, funcSize, branchDestAddress);
 
         if (branchDestAddress == null)
         {
@@ -315,7 +314,6 @@ public class ISALine
     private void parseInstruction(long funcBaseAddress, long funcSize)
     {
         pred = Predicate.AL;
-
 
         Matcher match = B_OPCODE.matcher(opcode);
         if (match.matches())
@@ -524,8 +522,8 @@ public class ISALine
                 // is very useful for some cost models
                 if (targetFunction == null)
                 {
-                    String msg = String.format("call 0x%08x <callee_name>",
-                                               address);
+                    String msg =
+                        String.format("call 0x%08x <callee_name>", address);
                     infoMsgs.add(msg);
                 }
                 break;
@@ -799,8 +797,8 @@ public class ISALine
         {
             exit = (type == InstructionType.OTHER ||
                     type == InstructionType.BRANCH_LINK) ?
-                    true :
-                    exit;
+                true :
+                exit;
         }
     }
 
@@ -819,5 +817,4 @@ public class ISALine
 
         return allocationSize;
     }
-
 }

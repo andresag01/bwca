@@ -28,8 +28,8 @@ public class WCABlockCostIHGC
 
     public String toString()
     {
-        return String.format(" *    - ALLOC: %d\n" +
-                             " *    - FUNCS: %d\n",
+        return String.format(" *    - ALLOC: %d\n"
+                                 + " *    - FUNCS: %d\n",
                              alloc,
                              funcCall);
     }

@@ -33,7 +33,8 @@ public class CFGConfiguration
                         + "\\s+(?<max>\\d+)"
                         + "\\s+from\\s+call\\s+"
                         + "(?<call>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})$");
-    static final Pattern CMD_FUNC_CALL = Pattern.compile("^call\\s+"
+    static final Pattern CMD_FUNC_CALL =
+        Pattern.compile("^call\\s+"
                         + "(?<src>0(x|X)[0-9A-Fa-f]{1,8}|(0d)?[0-9]{1,})\\s+"
                         + "(?<dest>[a-zA-Z_]\\w*)$");
     static final Pattern CMD_ALLOC_SIZE =
@@ -198,14 +199,16 @@ public class CFGConfiguration
                     if ((src & 0x1) != 0)
                     {
                         System.out.printf("Source address at '%s' is not "
-                                          + "aligned to halfword boundary\n",
+                                              +
+                                              "aligned to halfword boundary\n",
                                           src);
                         System.exit(1);
                     }
                     if ((dest & 0x1) != 0)
                     {
                         System.out.printf("Destination address at '%s' is not "
-                                          + "aligned to halfword boundary\n",
+                                              +
+                                              "aligned to halfword boundary\n",
                                           dest);
                         System.exit(1);
                     }
@@ -222,14 +225,16 @@ public class CFGConfiguration
                     if ((src & 0x1) != 0)
                     {
                         System.out.printf("Source address at '%s' is not "
-                                          + "aligned to halfword boundary\n",
+                                              +
+                                              "aligned to halfword boundary\n",
                                           src);
                         System.exit(1);
                     }
                     if ((dest & 0x1) != 0)
                     {
                         System.out.printf("Destination address at '%s' is not "
-                                          + "aligned to halfword boundary\n",
+                                              +
+                                              "aligned to halfword boundary\n",
                                           dest);
                         System.exit(1);
                     }

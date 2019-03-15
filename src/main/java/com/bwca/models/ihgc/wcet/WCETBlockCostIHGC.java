@@ -21,12 +21,12 @@ public class WCETBlockCostIHGC
 
     public String toString()
     {
-        return String.format(" *    - ALU: %d\n" +
-                             " *    - MEM: %d\n" +
-                             " *    - BRANCH: %d\n" +
-                             " *    - DIR: %d\n" +
-                             " *    - DIRMEM: %d\n" +
-                             " *    - FUNCS: %d\n",
+        return String.format(" *    - ALU: %d\n"
+                                 + " *    - MEM: %d\n"
+                                 + " *    - BRANCH: %d\n"
+                                 + " *    - DIR: %d\n"
+                                 + " *    - DIRMEM: %d\n"
+                                 + " *    - FUNCS: %d\n",
                              alu,
                              mem,
                              branch,

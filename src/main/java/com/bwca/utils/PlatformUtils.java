@@ -55,5 +55,4 @@ public class PlatformUtils
             System.exit(1);
         }
     }
-
 }

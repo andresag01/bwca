@@ -261,8 +261,8 @@ public class Controller
         {
             String outputConfig = outputDir + File.separator + "config.bwca";
             System.out.println("The program is missing annotations. Please "
-                               + "fill in the missing information at "
-                               + outputConfig + ", then run the program again "
+                               + "fill in the missing information at " +
+                               outputConfig + ", then run the program again "
                                + "with the -c argument.");
             module.writeCFGInDotRepresentation(null);
             module.writeFCGInDotRepresentation();
@@ -273,8 +273,8 @@ public class Controller
         for (Model model : models)
         {
             System.out.printf("Applying model '%s' from function '%s'\n",
-                               model.getName(),
-                               entryFunctionName);
+                              model.getName(),
+                              entryFunctionName);
             String solution = module.applyModel(model);
 
             System.out.println("    - Writing CFG .dot file");

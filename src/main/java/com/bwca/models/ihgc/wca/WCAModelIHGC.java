@@ -79,8 +79,8 @@ public class WCAModelIHGC extends Model
 
         if (cost == null)
         {
-            System.out.println("Block is not in model when adding function " +
-                               "call cost!");
+            System.out.println("Block is not in model when adding function "
+                               + "call cost!");
             System.exit(1);
         }
         if (callCost == null)

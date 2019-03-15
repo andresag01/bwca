@@ -88,7 +88,7 @@ public class ISAFunction
     static final String ILP_SOLUTION_FILE_EXT = ".sol";
 
     static final String LP_SOLVE = "lp_solve";
-    static final String[] LP_SOLVE_CMD = {LP_SOLVE};
+    static final String[] LP_SOLVE_CMD = { LP_SOLVE };
 
     private Long address;
     private long size;
@@ -257,12 +257,8 @@ public class ISAFunction
             }
 
             // Create the instruction
-            ISALine line = new ISALine(address,
-                                       opcode,
-                                       body,
-                                       config,
-                                       this.address,
-                                       this.size);
+            ISALine line = new ISALine(
+                address, opcode, body, config, this.address, this.size);
             // Check for missing information
             insts.add(line);
         }
@@ -647,8 +643,8 @@ public class ISAFunction
                     {
                         // Case E: Reentry...
                         // The loop is irreducible
-                        System.out.printf("Function %s has an irreducible " +
-                                          "loop!",
+                        System.out.printf("Function %s has an irreducible "
+                                              + "loop!",
                                           name);
                         System.exit(1);
                     }
@@ -715,8 +711,7 @@ public class ISAFunction
             block.applyModel(model);
 
             // Add the cost of the function calls this block makes
-            for (FunctionCallDetails dep :
-                 block.getFunctionCallDependencies())
+            for (FunctionCallDetails dep : block.getFunctionCallDependencies())
             {
                 model.addFunctionCallCost(block, dep);
             }
@@ -810,8 +805,8 @@ public class ISAFunction
                 if (bound == null)
                 {
                     String msg = String.format("loopbound 0x%08x min <BOUND> "
-                                               + "max <BOUND> from call "
-                                               + "0x%08x",
+                                                   + "max <BOUND> from call "
+                                                   + "0x%08x",
                                                successorAddress,
                                                call.getCallAddress());
                     infoMsgs.add(msg);
@@ -826,13 +821,13 @@ public class ISAFunction
                 {
                     long instAddress = inst.getAddress();
                     long callAddress = call.getCallAddress();
-                    Long allocSize = config.getAllocationSize(callAddress,
-                                                              instAddress);
+                    Long allocSize =
+                        config.getAllocationSize(callAddress, instAddress);
 
                     if (allocSize == null)
                     {
                         String msg = String.format("allocation 0x%08x <BOUND> "
-                                                   + "from call 0x%08x",
+                                                       + "from call 0x%08x",
                                                    instAddress,
                                                    callAddress);
                         infoMsgs.add(msg);
@@ -905,8 +900,7 @@ public class ISAFunction
                 {
                     System.out.println("Block " + block.getId() + " has "
                                        + "no output edges and not an "
-                                       + "exit in function " + name +
-                                       "\n");
+                                       + "exit in function " + name + "\n");
                     System.exit(1);
                 }
                 outConstraints.append("1;\n");
@@ -998,15 +992,14 @@ public class ISAFunction
                                       inst.getAddress());
                 }
 
-                String constraint =
-                    String.format("\n/* Header 0x%08x */\n"
-                                      + "%s %s%d <= %s%d;\n",
-                                  inst.getAddress(),
-                                  lbound,
-                                  blockPfix,
-                                  block.getId(),
-                                  blockPfix,
-                                  successor.getId());
+                String constraint = String.format("\n/* Header 0x%08x */\n"
+                                                      + "%s %s%d <= %s%d;\n",
+                                                  inst.getAddress(),
+                                                  lbound,
+                                                  blockPfix,
+                                                  block.getId(),
+                                                  blockPfix,
+                                                  successor.getId());
                 loopConstraints.append(constraint);
 
                 constraint = String.format("%s%d <= %s %s%d;\n",

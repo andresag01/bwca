@@ -275,7 +275,6 @@ public class ISAModule
         // formulate and solve and ILP
         call = new FunctionCallDetails(entryFunction, 0, null);
         checkFunctionMissingInformation(call);
-
     }
 
     private void checkFunctionMissingInformation(FunctionCallDetails call)
@@ -308,7 +307,6 @@ public class ISAModule
 
         return false;
     }
-
 
     public ISAFunction getFunction(String key)
     {

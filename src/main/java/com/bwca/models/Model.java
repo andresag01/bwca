@@ -11,7 +11,7 @@ abstract public class Model
 {
     private static final String[][] MODELS = {
         { "wcet_ihgc", "Worst-Case Execution Time for the IHGC processor" },
-        { "wca_ihgc",  "Worst-Case Allocation for the IHGC processor" },
+        { "wca_ihgc", "Worst-Case Allocation for the IHGC processor" },
     };
 
     public abstract void addLineCost(ISABlock block, ISALine inst);
