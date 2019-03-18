@@ -892,16 +892,16 @@ public class ISAFunction
                 {
                     positiveCost = String.format("%s %s%d",
                                                  positiveCost,
-                                                 blockPfix,
-                                                 block.getId());
+                                                 edgePfix,
+                                                 edge.getId());
                     problemAdd.add(positiveCost);
                 }
                 if (negativeCost != null)
                 {
                     negativeCost = String.format("%s %s%d",
                                                  negativeCost,
-                                                 blockPfix,
-                                                 block.getId());
+                                                 edgePfix,
+                                                 edge.getId());
                     problemSub.add(negativeCost);
                 }
             }
@@ -916,7 +916,7 @@ public class ISAFunction
         String problemStr = String.join("\n     + ", problemAdd);
         if (problemSub.size() > 0)
         {
-            problemStr += "\n     - " + String.join("\n    - ", problemSub);
+            problemStr += "\n     - " + String.join("\n     - ", problemSub);
         }
         problemStr += (intercept != null) ? "\n    " + intercept : "";
 
