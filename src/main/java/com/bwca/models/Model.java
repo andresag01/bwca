@@ -20,6 +20,8 @@ abstract public class Model
           "Worst-Case Garbage Collection cycles for the IHGC processor" },
     };
 
+    protected static final double FP_THRESHOLD = 0.001;
+
     public abstract void addLineCost(ISABlock block, ISALine inst);
 
     public abstract void addEdgeCost(ISABlock block, BranchTarget edge);

@@ -270,6 +270,9 @@ public class Controller
             System.exit(1);
         }
 
+        System.out.println("Writing FCG .dot file");
+        module.writeFCGInDotRepresentation();
+
         for (Model model : models)
         {
             System.out.printf("Applying model '%s' from function '%s'\n",
@@ -279,9 +282,6 @@ public class Controller
 
             System.out.println("    - Writing CFG .dot file");
             module.writeCFGInDotRepresentation(model);
-
-            System.out.println("    - Writing FCG .dot file");
-            module.writeFCGInDotRepresentation();
 
             System.out.printf("    - Solution: %s\n", solution);
         }

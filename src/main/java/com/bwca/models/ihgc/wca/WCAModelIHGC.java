@@ -105,7 +105,20 @@ public class WCAModelIHGC extends Model
     public void addFunctionCallDetailsCost(FunctionCallDetails call,
                                            String cost)
     {
-        calls.put(call, Long.parseLong(cost));
+        // Apparently, lp_solve can output a result as a floating-point value
+        // even though everything is an integer. To get around this, we parse
+        // the input solution as a double and check the parse value is below
+        // a threshold
+        double fpCost = Double.parseDouble(cost);
+        double floor = Math.floor(fpCost);
+
+        if (fpCost - floor > Model.FP_THRESHOLD)
+        {
+            System.out.println("Floating-poing value above threshold");
+            System.exit(1);
+        }
+
+        calls.put(call, (long)floor);
     }
 
     public String getObjectiveFunctionType()
