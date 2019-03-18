@@ -2,13 +2,15 @@ package com.bwca.models.ihgc.wcma;
 
 public class WCMABlockCostIHGC
 {
-    private double fetch;
+    private double addFetch;
+    private double subFetch;
     private double mem;
     private double funcCall;
 
     public WCMABlockCostIHGC()
     {
-        this.fetch = 0.0;
+        this.addFetch = 0.0;
+        this.subFetch = 0.0;
         this.mem = 0.0;
         this.funcCall = 0.0;
     }
@@ -20,12 +22,12 @@ public class WCMABlockCostIHGC
 
     public void addFetch(double val)
     {
-        fetch += val;
+        addFetch += val;
     }
 
     public void subFetch(double val)
     {
-        fetch -= val;
+        subFetch += val;
     }
 
     public void addMem(double val)
@@ -33,9 +35,14 @@ public class WCMABlockCostIHGC
         mem += val;
     }
 
-    public double getFetch()
+    public double getAddFetch()
     {
-        return fetch;
+        return addFetch;
+    }
+
+    public double getSubFetch()
+    {
+        return subFetch;
     }
 
     public double getMem()
@@ -45,16 +52,18 @@ public class WCMABlockCostIHGC
 
     public double getPositiveCost()
     {
-        return fetch + mem + funcCall;
+        return addFetch - subFetch + mem + funcCall;
     }
 
     public String toString()
     {
         return String.format(" *    - MEM: %.2f\n"
-                                 + " *    - FETCH: %.2f\n"
+                                 + " *    - FETCH+: %.2f\n"
+                                 + " *    - FETCH-: %.2f\n"
                                  + " *    - FUNCS: %.2f\n",
                              mem,
-                             fetch,
+                             addFetch,
+                             subFetch,
                              funcCall);
     }
 }
