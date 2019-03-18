@@ -6,6 +6,7 @@ import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
 import com.bwca.cfg.FunctionCallDetails;
+import com.bwca.cfg.CFGSolution;
 import com.bwca.models.Model;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
 import com.bwca.models.ihgc.wcma.WCMAModelIHGC;
@@ -154,7 +155,7 @@ public class WCGCModelIHGC extends Model
     }
 
     public void addFunctionCallDetailsCost(FunctionCallDetails call,
-                                           String cost)
+                                           CFGSolution cost)
     {
         // Hack: The problem is that WCMA uses floats but WCET uses ints, so
         // when we use the previous solution to a function we might end up
@@ -163,7 +164,10 @@ public class WCGCModelIHGC extends Model
         // integer value for both WCET and WCMA. Asside from some precision
         // issues, this does not cause any inaccuracies because WCET and WCMA
         // end up being subtracted later on.
-        cost = Integer.toString((int)Math.ceil(Double.parseDouble(cost)));
+
+        //String costStr = cost.getObjectiveFunctionSolution();
+        //double costDouble = Math.ceil(Double.parseDouble(costStr));
+        //int costInt = Integer.toString((int)costDouble);
 
         wcet.addFunctionCallDetailsCost(call, cost);
         wcma.addFunctionCallDetailsCost(call, cost);

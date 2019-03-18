@@ -9,6 +9,7 @@ import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
 import com.bwca.cfg.FunctionCallDetails;
+import com.bwca.cfg.CFGSolution;
 import com.bwca.models.Model;
 
 public class WCAModelIHGC extends Model
@@ -103,13 +104,14 @@ public class WCAModelIHGC extends Model
     }
 
     public void addFunctionCallDetailsCost(FunctionCallDetails call,
-                                           String cost)
+                                           CFGSolution cost)
     {
         // Apparently, lp_solve can output a result as a floating-point value
         // even though everything is an integer. To get around this, we parse
         // the input solution as a double and check the parse value is below
         // a threshold
-        double fpCost = Double.parseDouble(cost);
+        double fpCost = Double.parseDouble(
+            cost.getObjectiveFunctionSolution());
         double floor = Math.floor(fpCost);
 
         if (fpCost - floor > Model.FP_THRESHOLD)

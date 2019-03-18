@@ -9,6 +9,7 @@ import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
 import com.bwca.cfg.FunctionCallDetails;
+import com.bwca.cfg.CFGSolution;
 import com.bwca.models.Model;
 
 public class WCMAModelIHGC extends Model
@@ -140,9 +141,10 @@ public class WCMAModelIHGC extends Model
     }
 
     public void addFunctionCallDetailsCost(FunctionCallDetails call,
-                                           String cost)
+                                           CFGSolution cost)
     {
-        calls.put(call, Double.parseDouble(cost));
+        calls.put(call,
+                  Double.parseDouble(cost.getObjectiveFunctionSolution()));
     }
 
     public String getObjectiveFunctionType()

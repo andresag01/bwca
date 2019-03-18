@@ -4,6 +4,7 @@ import com.bwca.cfg.FunctionCallDetails;
 import com.bwca.cfg.ISABlock;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.ISALine;
+import com.bwca.cfg.CFGSolution;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
 import com.bwca.models.ihgc.wca.WCAModelIHGC;
 import com.bwca.models.ihgc.wcma.WCMAModelIHGC;
@@ -30,7 +31,7 @@ abstract public class Model
                                              FunctionCallDetails call);
 
     public abstract void addFunctionCallDetailsCost(FunctionCallDetails call,
-                                                    String cost);
+                                                    CFGSolution cost);
 
     public abstract String getBlockSummary(ISABlock block);
 

@@ -28,9 +28,6 @@ public class ISAFunction
                         + "\\s+(?<opcode>\\w+)(\\.n)?(?<body>.*)$");
     static final Pattern FUNC = Pattern.compile("^(?<address>[0-9a-fA-F]+)\\s+"
                                                 + "<(?<name>[^>]+)>:$");
-    static final Pattern LP_SOLVE_SOLUTION =
-        Pattern.compile("^Value of objective function:\\s+"
-                        + "(?<solution>[0-9]+(\\.[0-9]+)?)$");
     static final String DOT_TOP_LEVEL = "digraph G {\n"
         + "    subgraph cluster_cfg {\n"
         + "        color = white;\n"
@@ -695,7 +692,7 @@ public class ISAFunction
         String baseFilename;
         String lpFile;
         String solFile;
-        String solution;
+        CFGSolution solution;
 
         baseFilename = String.format("%s%s%s@0x%08x",
                                      outputDir,
@@ -725,7 +722,7 @@ public class ISAFunction
         model.addFunctionCallDetailsCost(call, solution);
     }
 
-    private String solveILP(String lpFile, String solFile)
+    private CFGSolution solveILP(String lpFile, String solFile)
     {
         ArrayList<String> output = null;
         File outputLpSolveFile;
@@ -752,26 +749,7 @@ public class ISAFunction
             System.exit(1);
         }
 
-        // Parse the lp_solve output to get the result
-        String solution = null;
-        for (String line : output)
-        {
-            Matcher match = LP_SOLVE_SOLUTION.matcher(line);
-            if (match.matches())
-            {
-                solution = match.group("solution");
-                break;
-            }
-        }
-
-        if (solution == null)
-        {
-            System.out.println("Solution file " + solFile + "does not "
-                               + "contain solution\n");
-            System.exit(1);
-        }
-
-        return solution;
+        return new CFGSolution(output);
     }
 
     public void checkMissingInformation(FunctionCallDetails call)
