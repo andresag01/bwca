@@ -352,7 +352,9 @@ public class ISAModule
 
             PlatformUtils.createOutputDirectory(outDir);
 
-            func.writeDotFile(outDir + File.separator + "partial.dot", null);
+            func.writeDotFile(outDir + File.separator + "partial.dot",
+                              null,
+                              null);
         }
     }
 

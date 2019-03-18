@@ -32,7 +32,7 @@ public class ISAFunction
         + "    subgraph cluster_cfg {\n"
         + "        color = white;\n"
         + "        node [shape=box,style=filled,fillcolor=yellow];\n"
-        + "        label = \"Function: %s()\";\n"
+        + "        label = \"Function: %s()%s\";\n"
         + "        labelloc = \"t\";\n"
         + "        legend [fillcolor=lightgrey,label=<<table "
         + "                                            border=\"0\""
@@ -729,6 +729,9 @@ public class ISAFunction
         // Add the solution for this function call for later use
         model.addFunctionCallDetailsCost(this, call, solution);
 
+        // Write the annotated CFG in dot format
+        writeDotFile(baseFilename + ".dot", model, call);
+
         // Clear the model's data structures so that we can accurately resolve
         // another call later without stacking the weights of blocks and edges
         model.clear();
@@ -1112,7 +1115,9 @@ public class ISAFunction
         return deps;
     }
 
-    public void writeDotFile(String filename, Model model)
+    public void writeDotFile(String filename,
+                             Model model,
+                             FunctionCallDetails call)
     {
         try
         {
@@ -1133,15 +1138,15 @@ public class ISAFunction
                 block.edgesToString(edges, model);
             }
 
+            // This ISAFunction might be empty because we do not have
+            // information about its size
             String nodesStr = "";
-            if (nodes.size() < 0)
+            if (nodes.size() > 0)
             {
-                System.out.println("Trying to print empty function");
-                System.exit(1);
+                nodesStr = String.join(";\n        ", nodes);
+                nodesStr = "        " + nodesStr;
+                nodesStr += ";\n";
             }
-            nodesStr = String.join(";\n        ", nodes);
-            nodesStr = "        " + nodesStr;
-            nodesStr += ";\n";
 
             String edgesStr = "";
             if (edges.size() > 0)
@@ -1151,8 +1156,18 @@ public class ISAFunction
                 edgesStr += ";\n";
             }
 
-            String dot =
-                String.format(DOT_TOP_LEVEL, this.name, nodesStr, edgesStr);
+            String functionCallCost = "";
+            if (model != null && call != null)
+            {
+                functionCallCost = String.format(
+                    " {cost:%s}", model.getFunctionCallCost(call));
+            }
+
+            String dot = String.format(DOT_TOP_LEVEL,
+                                       this.name,
+                                       functionCallCost,
+                                       nodesStr,
+                                       edgesStr);
 
             bwriter.write(dot);
             bwriter.close();
