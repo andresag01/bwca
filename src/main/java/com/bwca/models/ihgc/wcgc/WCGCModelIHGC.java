@@ -172,16 +172,14 @@ public class WCGCModelIHGC extends Model
         for (ISABlock block : blocks)
         {
             blockSolution = solution.getBlockSolution(block.getId());
-            model.accumulateFunctionCallDetailsBlockCost(call,
-                                                         block,
-                                                         blockSolution);
+            model.accumulateFunctionCallDetailsBlockCost(
+                call, block, blockSolution);
 
             for (BranchTarget edge : block.getEdges())
             {
                 edgeSolution = solution.getEdgeSolution(edge.getId());
-                model.accumulateFunctionCallDetailsEdgeCost(call,
-                                                            edge,
-                                                            edgeSolution);
+                model.accumulateFunctionCallDetailsEdgeCost(
+                    call, edge, edgeSolution);
             }
         }
     }

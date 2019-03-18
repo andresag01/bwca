@@ -45,10 +45,9 @@ abstract public class Model
         return;
     }
 
-    public void accumulateFunctionCallDetailsEdgeCost(
-        FunctionCallDetails call,
-        BranchTarget edge,
-        int repetitions)
+    public void accumulateFunctionCallDetailsEdgeCost(FunctionCallDetails call,
+                                                      BranchTarget edge,
+                                                      int repetitions)
     {
         System.out.println("Model does not support accumulating edge costs");
         System.exit(1);

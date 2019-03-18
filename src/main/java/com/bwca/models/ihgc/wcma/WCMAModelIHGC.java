@@ -165,10 +165,9 @@ public class WCMAModelIHGC extends Model
         calls.put(call, acc);
     }
 
-    public void accumulateFunctionCallDetailsEdgeCost(
-        FunctionCallDetails call,
-        BranchTarget edge,
-        int repetitions)
+    public void accumulateFunctionCallDetailsEdgeCost(FunctionCallDetails call,
+                                                      BranchTarget edge,
+                                                      int repetitions)
     {
         Double acc = calls.get(call);
         WCMAEdgeCostIHGC edgeCost = edges.get(edge);

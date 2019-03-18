@@ -123,8 +123,8 @@ public class WCETModelIHGC extends Model
         // even though everything is an integer. To get around this, we parse
         // the input solution as a double and check the parse value is below
         // a threshold
-        double fpCost = Double.parseDouble(
-            cost.getObjectiveFunctionSolution());
+        double fpCost =
+            Double.parseDouble(cost.getObjectiveFunctionSolution());
         double floor = Math.floor(fpCost);
 
         if (fpCost - floor > Model.FP_THRESHOLD)
@@ -152,10 +152,9 @@ public class WCETModelIHGC extends Model
         calls.put(call, acc);
     }
 
-    public void accumulateFunctionCallDetailsEdgeCost(
-        FunctionCallDetails call,
-        BranchTarget edge,
-        int repetitions)
+    public void accumulateFunctionCallDetailsEdgeCost(FunctionCallDetails call,
+                                                      BranchTarget edge,
+                                                      int repetitions)
     {
         Integer acc = calls.get(call);
         WCETEdgeCostIHGC edgeCost = edges.get(edge);

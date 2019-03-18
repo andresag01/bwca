@@ -851,18 +851,14 @@ public class ISAFunction
 
             if (positiveCost != null)
             {
-                positiveCost = String.format("%s %s%d",
-                                             positiveCost,
-                                             blockPfix,
-                                             block.getId());
+                positiveCost = String.format(
+                    "%s %s%d", positiveCost, blockPfix, block.getId());
                 problemAdd.add(positiveCost);
             }
             if (negativeCost != null)
             {
-                negativeCost = String.format("%s %s%d",
-                                             negativeCost,
-                                             blockPfix,
-                                             block.getId());
+                negativeCost = String.format(
+                    "%s %s%d", negativeCost, blockPfix, block.getId());
                 problemSub.add(negativeCost);
             }
 
@@ -873,18 +869,14 @@ public class ISAFunction
 
                 if (positiveCost != null)
                 {
-                    positiveCost = String.format("%s %s%d",
-                                                 positiveCost,
-                                                 edgePfix,
-                                                 edge.getId());
+                    positiveCost = String.format(
+                        "%s %s%d", positiveCost, edgePfix, edge.getId());
                     problemAdd.add(positiveCost);
                 }
                 if (negativeCost != null)
                 {
-                    negativeCost = String.format("%s %s%d",
-                                                 negativeCost,
-                                                 edgePfix,
-                                                 edge.getId());
+                    negativeCost = String.format(
+                        "%s %s%d", negativeCost, edgePfix, edge.getId());
                     problemSub.add(negativeCost);
                 }
             }
