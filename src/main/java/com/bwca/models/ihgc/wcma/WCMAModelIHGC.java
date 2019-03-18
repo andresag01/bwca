@@ -39,6 +39,12 @@ public class WCMAModelIHGC extends Model
         }
     }
 
+    public void clear()
+    {
+        blocks = new HashMap<ISABlock, WCMABlockCostIHGC>();
+        edges = new HashMap<BranchTarget, WCMAEdgeCostIHGC>();
+    }
+
     public String getName()
     {
         return "wcma_ihgc";

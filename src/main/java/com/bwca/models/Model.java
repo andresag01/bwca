@@ -77,6 +77,8 @@ abstract public class Model
 
     public abstract String getFunctionCallCost(FunctionCallDetails call);
 
+    public abstract void clear();
+
     public static void printModelsList()
     {
         StringBuilder builder = new StringBuilder();

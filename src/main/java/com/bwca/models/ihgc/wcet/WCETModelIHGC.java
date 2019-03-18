@@ -26,6 +26,12 @@ public class WCETModelIHGC extends Model
         calls = new HashMap<FunctionCallDetails, Integer>();
     }
 
+    public void clear()
+    {
+        blocks = new HashMap<ISABlock, WCETBlockCostIHGC>();
+        edges = new HashMap<BranchTarget, WCETEdgeCostIHGC>();
+    }
+
     public String getName()
     {
         return "wcet_ihgc";

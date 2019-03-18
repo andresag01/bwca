@@ -30,6 +30,12 @@ public class WCGCModelIHGC extends Model
         calls = new HashMap<FunctionCallDetails, Double>();
     }
 
+    public void clear()
+    {
+        wcet.clear();
+        wcma.clear();
+    }
+
     public String getName()
     {
         return "wcgc_ihgc";

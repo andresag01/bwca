@@ -728,6 +728,10 @@ public class ISAFunction
 
         // Add the solution for this function call for later use
         model.addFunctionCallDetailsCost(this, call, solution);
+
+        // Clear the model's data structures so that we can accurately resolve
+        // another call later without stacking the weights of blocks and edges
+        model.clear();
     }
 
     private CFGSolution solveILP(String lpFile, String solFile)

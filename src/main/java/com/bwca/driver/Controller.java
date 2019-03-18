@@ -250,7 +250,7 @@ public class Controller
 
         if (module.hasRecursiveFunctionCalls())
         {
-            module.writeCFGInDotRepresentation(null);
+            module.writeCFGInDotRepresentation();
             module.writeFCGInDotRepresentation();
             System.out.println("The program is recursive!");
             System.exit(1);
@@ -266,7 +266,7 @@ public class Controller
                                + "fill in the missing information at " +
                                outputConfig + ", then run the program again "
                                + "with the -c argument.");
-            module.writeCFGInDotRepresentation(null);
+            module.writeCFGInDotRepresentation();
             module.writeFCGInDotRepresentation();
             module.writeMissingInfoConfig(outputConfig);
             System.exit(1);
@@ -274,6 +274,8 @@ public class Controller
 
         System.out.println("Writing FCG .dot file");
         module.writeFCGInDotRepresentation();
+        System.out.println("Writing CFG .dot file");
+        module.writeCFGInDotRepresentation();
 
         for (Model model : models)
         {
@@ -281,9 +283,6 @@ public class Controller
                               model.getName(),
                               entryFunctionName);
             String solution = module.applyModel(model);
-
-            System.out.println("    - Writing CFG .dot file");
-            module.writeCFGInDotRepresentation(model);
 
             System.out.printf("    - Solution: %s\n", solution);
         }

@@ -341,7 +341,7 @@ public class ISAModule
         return model.getFunctionCallCost(call);
     }
 
-    public void writeCFGInDotRepresentation(Model model)
+    public void writeCFGInDotRepresentation()
     {
         // Write the CFGs for each function
         for (Map.Entry<String, ISAFunction> entry : funcMap.entrySet())
@@ -352,16 +352,7 @@ public class ISAModule
 
             PlatformUtils.createOutputDirectory(outDir);
 
-            if (model != null)
-            {
-                func.writeDotFile(
-                    outDir + File.separator + model.getName() + ".dot", model);
-            }
-            else
-            {
-                func.writeDotFile(outDir + File.separator + "partial.dot",
-                                  null);
-            }
+            func.writeDotFile(outDir + File.separator + "partial.dot", null);
         }
     }
 

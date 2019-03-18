@@ -27,6 +27,11 @@ public class WCAModelIHGC extends Model
         this.config = config;
     }
 
+    public void clear()
+    {
+        blocks = new HashMap<ISABlock, WCABlockCostIHGC>();
+    }
+
     public String getName()
     {
         return "wca_ihgc";
