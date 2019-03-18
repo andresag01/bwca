@@ -685,6 +685,11 @@ public class ISAFunction
         cur1.setInnerLoopHeader(cur2);
     }
 
+    public List<ISABlock> getBlocks()
+    {
+        return blocks;
+    }
+
     public void applyModel(String outputDir,
                            Model model,
                            FunctionCallDetails call)
@@ -719,7 +724,7 @@ public class ISAFunction
         solution = solveILP(lpFile, solFile);
 
         // Add the solution for this function call for later use
-        model.addFunctionCallDetailsCost(call, solution);
+        model.addFunctionCallDetailsCost(this, call, solution);
     }
 
     private CFGSolution solveILP(String lpFile, String solFile)

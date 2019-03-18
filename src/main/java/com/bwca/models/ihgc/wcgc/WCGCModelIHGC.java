@@ -1,7 +1,12 @@
 package com.bwca.models.ihgc.wcgc;
 
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
@@ -15,11 +20,14 @@ public class WCGCModelIHGC extends Model
 {
     private Model wcet;
     private Model wcma;
+    Map<FunctionCallDetails, Double> calls;
 
     public WCGCModelIHGC(int fetchWidthBytes)
     {
         wcet = new WCETModelIHGC();
         wcma = new WCMAModelIHGC(fetchWidthBytes);
+
+        calls = new HashMap<FunctionCallDetails, Double>();
     }
 
     public String getName()
@@ -86,7 +94,7 @@ public class WCGCModelIHGC extends Model
             return null;
         }
 
-        return String.format("%.2f", cost);
+        return String.format("%.2f", Math.abs(cost));
     }
 
     public String getNegativeEdgeCost(BranchTarget edge)
@@ -113,7 +121,7 @@ public class WCGCModelIHGC extends Model
             return null;
         }
 
-        return String.format("%.2f", cost);
+        return String.format("%.2f", Math.abs(cost));
     }
 
     public String getPositiveEdgeCost(BranchTarget edge)
@@ -154,23 +162,41 @@ public class WCGCModelIHGC extends Model
         wcma.addFunctionCallCost(block, call);
     }
 
-    public void addFunctionCallDetailsCost(FunctionCallDetails call,
-                                           CFGSolution cost)
+    private void resolveFunctionCallCost(List<ISABlock> blocks,
+                                         FunctionCallDetails call,
+                                         CFGSolution solution,
+                                         Model model)
     {
-        // Hack: The problem is that WCMA uses floats but WCET uses ints, so
-        // when we use the previous solution to a function we might end up
-        // giving floats to WCET and cause a failure. As a workaround, we
-        // round up the function result to the next integer and use this
-        // integer value for both WCET and WCMA. Asside from some precision
-        // issues, this does not cause any inaccuracies because WCET and WCMA
-        // end up being subtracted later on.
+        int blockSolution, edgeSolution;
 
-        //String costStr = cost.getObjectiveFunctionSolution();
-        //double costDouble = Math.ceil(Double.parseDouble(costStr));
-        //int costInt = Integer.toString((int)costDouble);
+        for (ISABlock block : blocks)
+        {
+            blockSolution = solution.getBlockSolution(block.getId());
+            model.accumulateFunctionCallDetailsBlockCost(call,
+                                                         block,
+                                                         blockSolution);
 
-        wcet.addFunctionCallDetailsCost(call, cost);
-        wcma.addFunctionCallDetailsCost(call, cost);
+            for (BranchTarget edge : block.getEdges())
+            {
+                edgeSolution = solution.getEdgeSolution(edge.getId());
+                model.accumulateFunctionCallDetailsEdgeCost(call,
+                                                            edge,
+                                                            edgeSolution);
+            }
+        }
+    }
+
+    public void addFunctionCallDetailsCost(ISAFunction caller,
+                                           FunctionCallDetails call,
+                                           CFGSolution solution)
+    {
+        // Compute the cost of the function for each of the models
+        resolveFunctionCallCost(caller.getBlocks(), call, solution, wcet);
+        resolveFunctionCallCost(caller.getBlocks(), call, solution, wcma);
+
+        // Add the WCGC cost of this call
+        calls.put(call,
+                  Double.parseDouble(solution.getObjectiveFunctionSolution()));
     }
 
     public String getObjectiveFunctionType()
@@ -180,13 +206,14 @@ public class WCGCModelIHGC extends Model
 
     public String getFunctionCallCost(FunctionCallDetails call)
     {
-        String wcmaCost = wcma.getFunctionCallCost(call);
-        String wcetCost = wcma.getFunctionCallCost(call);
+        Double cost = calls.get(call);
 
-        double cost =
-            Double.parseDouble(wcetCost) - Double.parseDouble(wcmaCost);
-
-        if (cost < 0.0)
+        if (cost == null)
+        {
+            System.out.println("Function call not registered in model!\n");
+            System.exit(1);
+        }
+        else if (cost < 0.0)
         {
             System.out.println("WCGC function call cost < 0.0");
             System.exit(1);

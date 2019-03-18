@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
@@ -103,7 +104,8 @@ public class WCAModelIHGC extends Model
         cost.addFunctionCall(callCost);
     }
 
-    public void addFunctionCallDetailsCost(FunctionCallDetails call,
+    public void addFunctionCallDetailsCost(ISAFunction caller,
+                                           FunctionCallDetails call,
                                            CFGSolution cost)
     {
         // Apparently, lp_solve can output a result as a floating-point value

@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
@@ -114,7 +115,8 @@ public class WCETModelIHGC extends Model
         cost.addFunctionCall(callCost);
     }
 
-    public void addFunctionCallDetailsCost(FunctionCallDetails call,
+    public void addFunctionCallDetailsCost(ISAFunction caller,
+                                           FunctionCallDetails call,
                                            CFGSolution cost)
     {
         // Apparently, lp_solve can output a result as a floating-point value
@@ -132,6 +134,43 @@ public class WCETModelIHGC extends Model
         }
 
         calls.put(call, (int)floor);
+    }
+
+    public void accumulateFunctionCallDetailsBlockCost(
+        FunctionCallDetails call,
+        ISABlock block,
+        int repetitions)
+    {
+        Integer acc = calls.get(call);
+
+        if (acc == null)
+        {
+            acc = 0;
+        }
+
+        acc += blocks.get(block).getPositiveCost() * repetitions;
+        calls.put(call, acc);
+    }
+
+    public void accumulateFunctionCallDetailsEdgeCost(
+        FunctionCallDetails call,
+        BranchTarget edge,
+        int repetitions)
+    {
+        Integer acc = calls.get(call);
+        WCETEdgeCostIHGC edgeCost = edges.get(edge);
+
+        if (acc == null)
+        {
+            acc = 0;
+        }
+        else if (edgeCost == null)
+        {
+            return;
+        }
+
+        acc -= repetitions * edgeCost.getNegativeCost();
+        calls.put(call, acc);
     }
 
     public String getObjectiveFunctionType()

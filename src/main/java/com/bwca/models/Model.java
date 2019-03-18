@@ -2,6 +2,7 @@ package com.bwca.models;
 
 import com.bwca.cfg.FunctionCallDetails;
 import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.CFGSolution;
@@ -30,8 +31,29 @@ abstract public class Model
     public abstract void addFunctionCallCost(ISABlock block,
                                              FunctionCallDetails call);
 
-    public abstract void addFunctionCallDetailsCost(FunctionCallDetails call,
+    public abstract void addFunctionCallDetailsCost(ISAFunction caller,
+                                                    FunctionCallDetails call,
                                                     CFGSolution cost);
+
+    public void accumulateFunctionCallDetailsBlockCost(
+        FunctionCallDetails call,
+        ISABlock block,
+        int repetitions)
+    {
+        System.out.println("Model does not support accumulating block costs");
+        System.exit(1);
+        return;
+    }
+
+    public void accumulateFunctionCallDetailsEdgeCost(
+        FunctionCallDetails call,
+        BranchTarget edge,
+        int repetitions)
+    {
+        System.out.println("Model does not support accumulating edge costs");
+        System.exit(1);
+        return;
+    }
 
     public abstract String getBlockSummary(ISABlock block);
 

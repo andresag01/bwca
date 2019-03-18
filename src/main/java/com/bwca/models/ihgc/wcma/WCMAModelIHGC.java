@@ -5,6 +5,7 @@ import java.util.HashMap;
 
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.ISABlock;
+import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
@@ -140,11 +141,49 @@ public class WCMAModelIHGC extends Model
         cost.addFunctionCall(callCost);
     }
 
-    public void addFunctionCallDetailsCost(FunctionCallDetails call,
+    public void addFunctionCallDetailsCost(ISAFunction caller,
+                                           FunctionCallDetails call,
                                            CFGSolution cost)
     {
         calls.put(call,
                   Double.parseDouble(cost.getObjectiveFunctionSolution()));
+    }
+
+    public void accumulateFunctionCallDetailsBlockCost(
+        FunctionCallDetails call,
+        ISABlock block,
+        int repetitions)
+    {
+        Double acc = calls.get(call);
+
+        if (acc == null)
+        {
+            acc = 0.0;
+        }
+
+        acc += blocks.get(block).getPositiveCost() * repetitions;
+        calls.put(call, acc);
+    }
+
+    public void accumulateFunctionCallDetailsEdgeCost(
+        FunctionCallDetails call,
+        BranchTarget edge,
+        int repetitions)
+    {
+        Double acc = calls.get(call);
+        WCMAEdgeCostIHGC edgeCost = edges.get(edge);
+
+        if (acc == null)
+        {
+            acc = 0.0;
+        }
+        else if (edgeCost == null)
+        {
+            return;
+        }
+
+        acc -= repetitions * edgeCost.getNegativeCost();
+        calls.put(call, acc);
     }
 
     public String getObjectiveFunctionType()
