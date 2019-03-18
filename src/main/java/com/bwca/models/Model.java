@@ -6,6 +6,7 @@ import com.bwca.cfg.ISAFunction;
 import com.bwca.cfg.BranchTarget;
 import com.bwca.cfg.ISALine;
 import com.bwca.cfg.CFGSolution;
+import com.bwca.cfg.CFGConfiguration;
 import com.bwca.models.ihgc.wcet.WCETModelIHGC;
 import com.bwca.models.ihgc.wca.WCAModelIHGC;
 import com.bwca.models.ihgc.wcma.WCMAModelIHGC;
@@ -25,9 +26,11 @@ abstract public class Model
     protected static final double FP_THRESHOLD = 0.001;
 
     public abstract void addLineCost(ISABlock block, ISALine inst);
-
     public abstract void addEdgeCost(ISABlock block, BranchTarget edge);
-
+    public void addBlockCost(ISABlock block, FunctionCallDetails call)
+    {
+        return;
+    }
     public abstract void addFunctionCallCost(ISABlock block,
                                              FunctionCallDetails call);
 
@@ -85,7 +88,9 @@ abstract public class Model
         System.out.print(builder.toString());
     }
 
-    public static Model createModel(String modelOption, int fetchWidthBytes)
+    public static Model createModel(String modelOption,
+                                    int fetchWidthBytes,
+                                    CFGConfiguration config)
     {
         switch (modelOption)
         {
@@ -93,7 +98,7 @@ abstract public class Model
                 return new WCETModelIHGC();
 
             case "wca_ihgc":
-                return new WCAModelIHGC();
+                return new WCAModelIHGC(config);
 
             case "wcma_ihgc":
                 return new WCMAModelIHGC(fetchWidthBytes);

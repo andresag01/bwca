@@ -11,17 +11,20 @@ import com.bwca.cfg.InstructionType;
 import com.bwca.cfg.Instruction;
 import com.bwca.cfg.FunctionCallDetails;
 import com.bwca.cfg.CFGSolution;
+import com.bwca.cfg.CFGConfiguration;
 import com.bwca.models.Model;
 
 public class WCAModelIHGC extends Model
 {
     private Map<ISABlock, WCABlockCostIHGC> blocks;
     private Map<FunctionCallDetails, Long> calls;
+    private CFGConfiguration config;
 
-    public WCAModelIHGC()
+    public WCAModelIHGC(CFGConfiguration config)
     {
         this.blocks = new HashMap<ISABlock, WCABlockCostIHGC>();
         this.calls = new HashMap<FunctionCallDetails, Long>();
+        this.config = config;
     }
 
     public String getName()
@@ -97,11 +100,42 @@ public class WCAModelIHGC extends Model
         }
         if (callCost == null)
         {
-            System.out.println("Call cost not available in mode");
+            System.out.println("Call cost not available in model");
             System.exit(1);
         }
 
+        // Add the cost of functions called within the block
         cost.addFunctionCall(callCost);
+    }
+
+    public void addBlockCost(ISABlock block, FunctionCallDetails call)
+    {
+        WCABlockCostIHGC cost = new WCABlockCostIHGC();
+        blocks.put(block, cost);
+
+        // Add the cost of getm instructions executed within the block
+        for (ISALine inst : block.getInstructions())
+        {
+            if (inst.getInstruction() == Instruction.WFI)
+            {
+                long instAddress = inst.getAddress();
+                long callAddress = call.getCallAddress();
+                Long allocSize =
+                    config.getAllocationSize(callAddress, instAddress);
+
+                if (allocSize == null)
+                {
+                    System.out.printf("No information about allocation at "
+                                          + "0x%08x from call 0x%08x",
+                                      instAddress,
+                                      callAddress);
+                }
+                else
+                {
+                    cost.addFunctionCall(allocSize);
+                }
+            }
+        }
     }
 
     public void addFunctionCallDetailsCost(ISAFunction caller,
@@ -150,17 +184,6 @@ public class WCAModelIHGC extends Model
 
     public void addLineCost(ISABlock block, ISALine inst)
     {
-        WCABlockCostIHGC cost = blocks.get(block);
-
-        if (cost == null)
-        {
-            cost = new WCABlockCostIHGC();
-            blocks.put(block, cost);
-        }
-
-        if (inst.getInstruction() == Instruction.WFI)
-        {
-            cost.addAllocation(inst.getAllocationSize());
-        }
+        return;
     }
 }

@@ -712,6 +712,9 @@ public class ISAFunction
             // Add the cost of the blocks and edges
             block.applyModel(model);
 
+            // Add any other miscelaneous cost for the block
+            model.addBlockCost(block, call);
+
             // Add the cost of the function calls this block makes
             for (FunctionCallDetails dep : block.getFunctionCallDependencies())
             {
@@ -814,10 +817,6 @@ public class ISAFunction
                                                    instAddress,
                                                    callAddress);
                         infoMsgs.add(msg);
-                    }
-                    else
-                    {
-                        inst.setAllocationSize(allocSize);
                     }
                 }
             }

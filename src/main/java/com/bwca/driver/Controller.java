@@ -179,7 +179,9 @@ public class Controller
         }
         for (String modelOption : selectedModels)
         {
-            Model model = Model.createModel(modelOption, fetchWidthBytes);
+            Model model = Model.createModel(modelOption,
+                                            fetchWidthBytes,
+                                            cfgConfig);
             if (model == null)
             {
                 System.out.println("Unrecognized model " + modelOption);

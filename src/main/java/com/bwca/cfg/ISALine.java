@@ -13,9 +13,6 @@ public class ISALine
     private String opcode;
     private String body;
 
-    // Upper bound on allocation size
-    private Long allocationSize;
-
     // Useful for branches
     private InstructionType type;
     // There will be one entry per destination of conditional branch
@@ -74,7 +71,6 @@ public class ISALine
         this.targetFunctionAddress = null;
         this.exit = false;
         this.config = config;
-        this.allocationSize = null;
 
         parseInstruction(funcBaseAddress, funcSize);
     }
@@ -100,7 +96,6 @@ public class ISALine
         this.exit = exit;
         this.inst = inst;
         this.type = type;
-        this.allocationSize = null;
     }
 
     public String toString()
@@ -800,21 +795,5 @@ public class ISALine
                 true :
                 exit;
         }
-    }
-
-    public void setAllocationSize(long allocationSize)
-    {
-        this.allocationSize = allocationSize;
-    }
-
-    public long getAllocationSize()
-    {
-        if (allocationSize == null)
-        {
-            System.out.println("Allocation size not set for WFI instruction");
-            System.exit(1);
-        }
-
-        return allocationSize;
     }
 }
