@@ -167,7 +167,7 @@ public class ISALine
         }
         else if (type == InstructionType.BRANCH_LINK)
         {
-            System.out.println("Cound not parse function in '" + this + "'");
+            System.out.println("Could not parse function in '" + this + "'");
             System.exit(1);
         }
 
