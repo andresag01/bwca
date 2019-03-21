@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
-import java.util.Stack;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -571,30 +570,28 @@ public class ISAFunction
         {
             block.setMark(false);
         }
-        Stack<ISABlock> headers = new Stack<ISABlock>();
-        findLoopDepth(entry, headers, 0);
+        findLoopDepth(entry);
     }
 
-    private void findLoopDepth(ISABlock block,
-                               Stack<ISABlock> headers,
-                               int depth)
+    private void findLoopDepth(ISABlock block)
     {
         block.setMark(true);
 
-        if (block.isLoopHeader() || block.getInnerLoopHeader() != null)
+        if (block.isLoopHeader())
         {
-            if (block.isLoopHeader())
+            if (block.getInnerLoopHeader() == null)
             {
-                headers.push(block);
-                depth++;
+                block.setLoopDepth(0);
             }
-            else if (block.getInnerLoopHeader() != headers.peek())
+            else
             {
-                headers.pop();
-                depth--;
+                block.setLoopDepth(block.getInnerLoopHeader().getLoopDepth() +
+                                   1);
             }
-
-            block.setLoopDepth(depth - 1);
+        }
+        else if (block.getInnerLoopHeader() != null)
+        {
+            block.setLoopDepth(block.getInnerLoopHeader().getLoopDepth());
         }
 
         for (BranchTarget target : block.getEdges())
@@ -604,7 +601,7 @@ public class ISAFunction
             {
                 continue;
             }
-            findLoopDepth(successor, headers, depth);
+            findLoopDepth(successor);
         }
     }
 
