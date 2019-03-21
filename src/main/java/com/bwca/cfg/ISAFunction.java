@@ -645,7 +645,7 @@ public class ISAFunction
                         // Case E: Reentry...
                         // The loop is irreducible
                         System.out.printf("Function %s has an irreducible "
-                                              + "loop!",
+                                              + "loop!\n",
                                           name);
                         System.exit(1);
                     }
