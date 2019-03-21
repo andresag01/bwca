@@ -50,7 +50,8 @@ public class ISALine
         Pattern.compile("^(?<destAddr>[0-9a-f]+)\\s+<(?<funcName>[^>]+)>$");
     static final Pattern BRANCH_TARGET_ADDR_NO_FUNC =
         Pattern.compile("^[0-9a-f]+\\s+<[a-zA-Z0-9_]+\\+0x[0-9a-f]+>$");
-    static final Pattern BRANCH_FUNC_NAME = Pattern.compile("^[a-zA-Z_]\\w*$");
+    static final Pattern BRANCH_FUNC_NAME =
+        Pattern.compile("^[a-zA-Z_][a-zA-Z_\\.0-9]*$");
     static final Pattern REGLIST_BASE =
         Pattern.compile("^(?<baseReg>r[0-7])!?,\\s+(?<regList>.*)$");
 
