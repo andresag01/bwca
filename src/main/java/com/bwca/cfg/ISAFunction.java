@@ -228,7 +228,8 @@ public class ISAFunction
 
     private ArrayList<ISALine> extractInstructionsFromObjdump(
         ArrayList<String> objdump,
-        int funcIndex)
+        int funcIndex,
+        Map<String, SymbolTableRecord> symbolTable)
     {
         ArrayList<ISALine> insts = new ArrayList<ISALine>();
 
@@ -254,9 +255,13 @@ public class ISAFunction
             }
 
             // Create the instruction
-            ISALine line = new ISALine(
-                address, opcode, body, config, this.address, this.size);
-            // Check for missing information
+            ISALine line = new ISALine(address,
+                                       opcode,
+                                       body,
+                                       config,
+                                       this.address,
+                                       this.size,
+                                       symbolTable);
             insts.add(line);
         }
 
@@ -443,7 +448,8 @@ public class ISAFunction
         return dummyBlock;
     }
 
-    public int parseInstructions(ArrayList<String> objdump)
+    public int parseInstructions(ArrayList<String> objdump,
+                                 Map<String, SymbolTableRecord> symbolTable)
     {
         int funcIndex;
         ArrayList<ISALine> insts;
@@ -458,7 +464,8 @@ public class ISAFunction
         }
 
         funcIndex = findStartOfFunctionInObjdump(objdump);
-        insts = extractInstructionsFromObjdump(objdump, funcIndex);
+        insts =
+            extractInstructionsFromObjdump(objdump, funcIndex, symbolTable);
         branchTargetAddrs = new HashSet<Long>();
         extractBranchDestinationAddresses(insts, branchTargetAddrs);
         blocksMap = groupInstructionsInBlocks(insts, branchTargetAddrs);

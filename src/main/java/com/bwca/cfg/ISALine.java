@@ -1,5 +1,6 @@
 package com.bwca.cfg;
 
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.regex.Pattern;
@@ -58,7 +59,8 @@ public class ISALine
                    String body,
                    CFGConfiguration config,
                    long funcBaseAddress,
-                   long funcSize)
+                   long funcSize,
+                   Map<String, SymbolTableRecord> symbolTable)
     {
         this.address = address;
         this.size = 0;
@@ -72,7 +74,7 @@ public class ISALine
         this.exit = false;
         this.config = config;
 
-        parseInstruction(funcBaseAddress, funcSize);
+        parseInstruction(funcBaseAddress, funcSize, symbolTable);
     }
 
     public ISALine(long address,
@@ -171,16 +173,12 @@ public class ISALine
 
         if (inst == Instruction.B)
         {
-            addBranchTargetIfFeasible(address,
-                                      true,
-                                      funcBaseAddress,
-                                      funcSize);
+            addBranchTargetIfFeasible(
+                address, true, funcBaseAddress, funcSize);
             if (type == InstructionType.COND_BRANCH)
             {
-                addBranchTargetIfFeasible(this.address + 2,
-                                          false,
-                                          funcBaseAddress,
-                                          funcSize);
+                addBranchTargetIfFeasible(
+                    this.address + 2, false, funcBaseAddress, funcSize);
             }
         }
     }
@@ -195,8 +193,9 @@ public class ISALine
         if (!isAddressInFunction(funcBaseAddress, funcSize, dest))
         {
             // This is an exit branch which we do not support
-            System.out.printf("Branch instruction at 0x%08x exits function " +
-                "without return link\n", address);
+            System.out.printf("Branch instruction at 0x%08x exits function "
+                                  + "without return link\n",
+                              address);
             System.exit(1);
         }
         else if (unfeasibleDest == null || unfeasibleDest != dest)
@@ -317,8 +316,9 @@ public class ISALine
         else
         {
             // This is an exit branch which we do not support
-            System.out.printf("Branch instruction at 0x%08x exits function " +
-                "without return link\n", address);
+            System.out.printf("Branch instruction at 0x%08x exits function "
+                                  + "without return link\n",
+                              address);
             System.exit(1);
         }
     }
@@ -331,7 +331,9 @@ public class ISALine
                 address < funcBaseAddress + funcSize);
     }
 
-    private void parseInstruction(long funcBaseAddress, long funcSize)
+    private void parseInstruction(long funcBaseAddress,
+                                  long funcSize,
+                                  Map<String, SymbolTableRecord> symbolTable)
     {
         pred = Predicate.AL;
 
@@ -537,14 +539,29 @@ public class ISALine
                 size = 2;
                 // BLX instructions are not tagged with info about the call
                 targetFunction = config.getFunctionCalleeName(address);
-                // TODO: We are also supposed to set the targetAddress, but
-                // we currently do not have this information. This information
-                // is very useful for some cost models
                 if (targetFunction == null)
                 {
                     String msg =
                         String.format("call 0x%08x <callee_name>", address);
                     infoMsgs.add(msg);
+                }
+                else
+                {
+                    // Use the symbol table to work out what address the branch
+                    // is going to
+                    SymbolTableRecord symbol = symbolTable.get(targetFunction);
+                    if (symbol == null)
+                    {
+                        System.out.printf("Function %s in configuration file "
+                                              + "does not exist in the symbol "
+                                              + "table!\n",
+                                          targetFunction);
+                        System.exit(1);
+                    }
+                    else
+                    {
+                        targetFunctionAddress = symbol.getAddress();
+                    }
                 }
                 break;
 

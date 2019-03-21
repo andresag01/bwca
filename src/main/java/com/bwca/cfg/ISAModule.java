@@ -192,7 +192,7 @@ public class ISAModule
             func = new ISAFunction(addr, size, name, config);
         }
 
-        if (func.parseInstructions(objdump) != 0)
+        if (func.parseInstructions(objdump, symbolTable) != 0)
         {
             System.out.println("Something failed here");
             ret = -1;
@@ -352,9 +352,8 @@ public class ISAModule
 
             PlatformUtils.createOutputDirectory(outDir);
 
-            func.writeDotFile(outDir + File.separator + "partial.dot",
-                              null,
-                              null);
+            func.writeDotFile(
+                outDir + File.separator + "partial.dot", null, null);
         }
     }
 
