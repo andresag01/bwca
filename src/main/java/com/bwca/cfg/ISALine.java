@@ -275,8 +275,6 @@ public class ISALine
                                             long funcSize)
     {
         Long branchDestAddress = config.getBranchDestination(address);
-        boolean isInFunction =
-            isAddressInFunction(funcBaseAddress, funcSize, branchDestAddress);
 
         if (branchDestAddress == null)
         {
@@ -285,8 +283,13 @@ public class ISALine
 
             // Assume is an exit for simplicity
             exit = true;
+
+            return;
         }
-        else if (isInFunction)
+
+        boolean isInFunction =
+            isAddressInFunction(funcBaseAddress, funcSize, branchDestAddress);
+        if (isInFunction)
         {
             // This is a branch within the function
             branchTargets.add(new BranchTarget(branchDestAddress, true));
