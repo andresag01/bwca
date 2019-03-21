@@ -143,7 +143,9 @@ public class ISALine
         parseRegisterList(match.group("regList").trim());
     }
 
-    private void parseBranchTargetAddress(String body)
+    private void parseBranchTargetAddress(String body,
+                                          long funcBaseAddress,
+                                          long funcSize)
     {
         Matcher match = BRANCH_TARGET_ADDR.matcher(body);
         if (!match.matches())
@@ -169,19 +171,35 @@ public class ISALine
 
         if (inst == Instruction.B)
         {
-            addBranchTargetIfFeasible(address, true);
+            addBranchTargetIfFeasible(address,
+                                      true,
+                                      funcBaseAddress,
+                                      funcSize);
             if (type == InstructionType.COND_BRANCH)
             {
-                addBranchTargetIfFeasible(this.address + 2, false);
+                addBranchTargetIfFeasible(this.address + 2,
+                                          false,
+                                          funcBaseAddress,
+                                          funcSize);
             }
         }
     }
 
-    private void addBranchTargetIfFeasible(long dest, boolean resolution)
+    private void addBranchTargetIfFeasible(long dest,
+                                           boolean resolution,
+                                           long funcBaseAddress,
+                                           long funcSize)
     {
         Long unfeasibleDest = config.getUnfeasibleBranchDestination(address);
 
-        if (unfeasibleDest == null || unfeasibleDest != dest)
+        if (!isAddressInFunction(funcBaseAddress, funcSize, dest))
+        {
+            // This is an exit branch which we do not support
+            System.out.printf("Branch instruction at 0x%08x exits function " +
+                "without return link\n", address);
+            System.exit(1);
+        }
+        else if (unfeasibleDest == null || unfeasibleDest != dest)
         {
             branchTargets.add(new BranchTarget(dest, resolution));
         }
@@ -250,7 +268,9 @@ public class ISALine
         return opcode;
     }
 
-    private void processBranchLinkInstruction(String body)
+    private void processBranchLinkInstruction(String body,
+                                              long funcBaseAddress,
+                                              long funcSize)
     {
         Matcher match = BRANCH_TARGET_ADDR_NO_FUNC.matcher(body);
 
@@ -268,7 +288,7 @@ public class ISALine
             type = InstructionType.BRANCH_LINK;
         }
 
-        parseBranchTargetAddress(body);
+        parseBranchTargetAddress(body, funcBaseAddress, funcSize);
     }
 
     private void resolveUnconditionalBranch(long funcBaseAddress,
@@ -296,8 +316,10 @@ public class ISALine
         }
         else
         {
-            // This is an exit branch
-            exit = true;
+            // This is an exit branch which we do not support
+            System.out.printf("Branch instruction at 0x%08x exits function " +
+                "without return link\n", address);
+            System.exit(1);
         }
     }
 
@@ -400,7 +422,7 @@ public class ISALine
                     System.out.println("Unrecognized predicate in branch");
                     System.exit(1);
             }
-            parseBranchTargetAddress(body);
+            parseBranchTargetAddress(body, funcBaseAddress, funcSize);
             return;
         }
 
@@ -532,7 +554,7 @@ public class ISALine
                 // branches is not large enough to hold the immediate. We need
                 // to identify this condition here and decide whether we are
                 // dealing with a regular branch or a branch with link
-                processBranchLinkInstruction(body);
+                processBranchLinkInstruction(body, funcBaseAddress, funcSize);
                 size = 4;
                 break;
 
