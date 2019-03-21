@@ -12,6 +12,9 @@ plugins {
 
     // Apply the application plugin to add support for building an application
     id 'application'
+
+    // Apply license
+    id 'com.github.hierynomus.license' version '0.15.0'
 }
 
 // Define the main class for the application
@@ -34,4 +37,10 @@ repositories {
 
 task format(type: Exec) {
     commandLine './format.sh', './src/main/java'
+}
+
+license {
+    header file('LICENSE')
+    strictCheck true
+    ignoreFailures true
 }
