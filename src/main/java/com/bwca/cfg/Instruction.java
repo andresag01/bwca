@@ -74,6 +74,7 @@ public enum Instruction {
     BKPT,
     SVC,
     CPS,
+    CPSIF,
     /* Undefined instruction. Probably emitted for padding */
     UDF,
     FUNC_EXIT,

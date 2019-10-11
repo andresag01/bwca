@@ -457,6 +457,9 @@ public class WCMAModelIHGC extends Model
             case AND:
             case ADC:
             case CPS:
+                /* Instruction repurposed for putchr() */
+            case CPSIF:
+                /* Instruction repurposed for __aeabi_uidivmod() */
             case SVC:
             case BKPT:
                 cost.addFetch(costOfFetch(1));

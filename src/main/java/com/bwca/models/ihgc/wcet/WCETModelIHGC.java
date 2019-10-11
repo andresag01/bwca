@@ -371,6 +371,12 @@ public class WCETModelIHGC extends Model
                 break;
 
             case CPS:
+                /* Instruction repurposed for putchr() */
+                cost.addAlu(1);
+                break;
+
+            case CPSIF:
+                /* Instruction repurposed for __aeabi_uidivmod() */
                 cost.addAlu(1);
                 break;
 
