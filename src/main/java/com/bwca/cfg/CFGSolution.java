@@ -33,7 +33,7 @@ public class CFGSolution
 {
     private static final Pattern LP_SOLVE_SOLUTION =
         Pattern.compile("^Value of objective function:\\s+"
-                        + "(?<solution>[0-9]+(\\.[0-9]+)?)$");
+                        + "(?<solution>[0-9]+(\\.[0-9]+)?(e\\+\\d+)?)$");
     private static final Pattern LP_SOLVE_EDGE_SOLUTION =
         Pattern.compile("^e(?<id>\\d+)\\s+(?<solution>\\d+)$");
     private static final Pattern LP_SOLVE_BLOCK_SOLUTION =
