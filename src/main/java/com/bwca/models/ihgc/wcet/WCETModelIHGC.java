@@ -371,6 +371,7 @@ public class WCETModelIHGC extends Model
                 break;
 
             case CPS:
+            case CPSF:
                 /* Instruction repurposed for putchr() */
                 cost.addAlu(1);
                 break;

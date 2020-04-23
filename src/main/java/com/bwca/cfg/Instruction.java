@@ -75,6 +75,7 @@ public enum Instruction {
     SVC,
     CPS,
     CPSIF,
+    CPSF,
     /* Undefined instruction. Probably emitted for padding */
     UDF,
     FUNC_EXIT,

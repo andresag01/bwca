@@ -65,7 +65,7 @@ public class ISALine
     static final Pattern REGLIST =
         Pattern.compile("^\\{(?<regList>(r[0-7]|pc|lr)"
                         + "(,\\s+(r[0-7]|pc|lr))*)\\}$");
-    static final Pattern CPS_OPTS = Pattern.compile("^(?<opts>if?)$");
+    static final Pattern CPS_OPTS = Pattern.compile("^(?<opts>if|f?)$");
     static final Pattern SPLIT_REGLIST = Pattern.compile(",\\s+");
     static final Pattern REG_OPERANDS2_3 =
         Pattern.compile("^(?<dest>r[0-9]{1,2}|pc|lr|sp|ip|fp|sl|sb|wr),"
@@ -849,6 +849,15 @@ public class ISALine
                 else if (cpsOpts.group("opts").equals("i"))
                 {
                     inst = Instruction.CPSIF;
+                }
+                else if (cpsOpts.group("opts").equals("f"))
+                {
+                    inst = Instruction.CPSF;
+                }
+                else
+                {
+                    System.out.println("Could not match cps opts");
+                    System.exit(1);
                 }
                 size = 2;
                 break;

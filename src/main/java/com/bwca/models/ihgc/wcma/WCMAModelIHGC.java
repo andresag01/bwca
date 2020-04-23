@@ -459,6 +459,7 @@ public class WCMAModelIHGC extends Model
             case CPS:
                 /* Instruction repurposed for putchr() */
             case CPSIF:
+            case CPSF:
                 /* Instruction repurposed for __aeabi_uidivmod() */
             case SVC:
             case BKPT:
